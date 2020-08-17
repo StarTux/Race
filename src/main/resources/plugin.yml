@@ -1,0 +1,25 @@
+main: com.cavetale.race.RacePlugin
+name: Race
+version: 0.1
+
+author: StarTux
+description: Racing Minigame
+website: https://cavetale.com
+
+load: STARTUP
+api-version: 1.13
+
+depend: [Sidebar]
+softdepend: []
+
+commands:
+  race:
+    aliases: []
+    description: Race Command
+    permission: race.race
+    usage: /race
+
+permissions:
+  race.race:
+    description: Use /race
+    default: op
