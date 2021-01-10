@@ -22,12 +22,25 @@ public final class Cuboid {
             && z >= az && z <= bz;
     }
 
+    public boolean containsHorizontal(int x, int z) {
+        return x >= ax && x <= bx
+            && z >= az && z <= bz;
+    }
+
     public boolean contains(Block block) {
         return contains(block.getX(), block.getY(), block.getZ());
     }
 
+    public boolean containsHorizontal(Block block) {
+        return containsHorizontal(block.getX(), block.getZ());
+    }
+
     public boolean contains(Location loc) {
         return contains(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+    }
+
+    public boolean containsHorizontal(Location loc) {
+        return containsHorizontal(loc.getBlockX(), loc.getBlockZ());
     }
 
     public boolean contains(Vec3i v) {
@@ -124,5 +137,9 @@ public final class Cuboid {
 
     public Vec3i getCenter() {
         return new Vec3i((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
+    }
+
+    public Block getBottomBlock(World world) {
+        return world.getBlockAt((ax + bx) / 2, ay, (az + bz) / 2);
     }
 }

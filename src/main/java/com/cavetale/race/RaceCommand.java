@@ -53,6 +53,9 @@ public final class RaceCommand implements TabExecutor {
         checkpointNode.addChild("add")
             .description("Add a new checkpoint")
             .caller(this::checkpointAdd);
+        checkpointNode.addChild("remove")
+            .description("Remove a checkpoint")
+            .caller(this::checkpointRemove);
         checkpointNode.addChild("info")
             .description("Info about current checkpoint")
             .caller(this::checkpointInfo);
@@ -221,7 +224,25 @@ public final class RaceCommand implements TabExecutor {
         Cuboid b = checkpoints.get(indexB);
         checkpoints.set(indexA, b);
         checkpoints.set(indexB, a);
+        race.setCheckpoints(checkpoints);
+        race.save();
         context.message("" + ChatColor.YELLOW + race.name + ": Checkpoints swapped: " + indexA + ", " + indexB);
+        return true;
+    }
+
+    boolean checkpointRemove(CommandContext context, CommandNode node, String[] args) {
+        if (args.length != 1) return false;
+        Player player = context.requirePlayer();
+        Race race = requireRace(player);
+        List<Cuboid> checkpoints = race.getCheckpoints();
+        int index = requireInt(args[0]);
+        if (index < 0 || index >= checkpoints.size()) {
+            throw new CommandWarn("Out of bounds: " + index);
+        }
+        Cuboid old = checkpoints.remove(index);
+        race.setCheckpoints(checkpoints);
+        race.save();
+        context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint #" + index + " removed: " + old);
         return true;
     }
 

@@ -16,8 +16,11 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Strider;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 
 @RequiredArgsConstructor
@@ -46,10 +49,14 @@ public final class Race {
         List<Racer> racers = new ArrayList<>();
         long startTime = 0;
         int finishIndex = 0;
-        int laps = 3;
+        int laps = 1;
     }
 
     void tick(int ticks) {
+        if (getWorld() == null) {
+            setPhase(Phase.IDLE);
+            return;
+        }
         switch (tag.phase) {
         case EDIT: tickEdit(ticks); break;
         case START: tickStart(ticks); break;
@@ -120,6 +127,16 @@ public final class Race {
     }
 
     void tickRace(int ticks) {
+        for (Player player : getEligiblePlayers()) {
+            if (getRacer(player) != null) continue;
+            if (tag.spawnArea.contains(player.getLocation())) {
+                tag.racers.add(new Racer(player));
+                player.sendMessage(ChatColor.GREEN + "You joined the race!");
+                player.sendActionBar(ChatColor.GREEN + "You joined the race!");
+                player.getInventory().clear();
+                player.setGameMode(GameMode.ADVENTURE);
+            }
+        }
         pruneRacers();
         for (Racer racer : tag.racers) {
             if (racer.finished) continue;
@@ -129,6 +146,7 @@ public final class Race {
             Location loc = player.getLocation();
             if (checkpoint.contains(player.getEyeLocation()) || checkpoint.contains(player.getLocation().add(0, 2, 0))) {
                 racer.checkpointIndex += 1;
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
                 if (racer.checkpointIndex >= tag.checkpoints.size()) {
                     racer.checkpointIndex = 0;
                     racer.lap += 1;
@@ -180,6 +198,18 @@ public final class Race {
                 }
             }
         }
+        if (tag.type == RaceType.PARKOUR) {
+            for (Racer racer : tag.racers) {
+                Player player = racer.getPlayer();
+                if (player == null) continue;
+                if (!player.getInventory().contains(Material.ENDER_PEARL)) {
+                    player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
+                }
+                if (!player.getInventory().contains(Material.COMPASS)) {
+                    player.getInventory().addItem(new ItemStack(Material.COMPASS));
+                }
+            }
+        }
     }
 
     void setupCheckpoint(Racer racer, Cuboid checkpoint) {
@@ -199,7 +229,7 @@ public final class Race {
                 if (player == null || !player.isValid()) return true;
                 if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) return true;
                 Location loc = player.getLocation();
-                if (!isIn(loc.getWorld()) || !tag.area.contains(loc)) return true;
+                if (!isIn(loc.getWorld()) || !tag.area.containsHorizontal(loc)) return true;
                 return false;
             });
     }
@@ -263,15 +293,14 @@ public final class Race {
 
     public List<Player> getEligiblePlayers() {
         return getWorld().getPlayers().stream()
-            .filter(p -> tag.area.contains(p.getLocation()))
-            .filter(p -> p.getGameMode() == GameMode.SURVIVAL
-                    || p.getGameMode() == GameMode.ADVENTURE)
+            .filter(p -> tag.area.containsHorizontal(p.getLocation()))
+            .filter(p -> p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
             .collect(Collectors.toList());
     }
 
     public List<Player> getPresentPlayers() {
         return getWorld().getPlayers().stream()
-            .filter(p -> tag.area.contains(p.getLocation()))
+            .filter(p -> tag.area.containsHorizontal(p.getLocation()))
             .collect(Collectors.toList());
     }
 
@@ -279,10 +308,15 @@ public final class Race {
         tag.racers.clear();
         for (Player player : getEligiblePlayers()) {
             tag.racers.add(new Racer(player));
+            player.sendMessage(ChatColor.GREEN + "You joined the race!");
+            player.sendActionBar(ChatColor.GREEN + "You joined the race!");
+            player.getInventory().clear();
+            player.setGameMode(GameMode.ADVENTURE);
             player.teleport(getSpawnLocation());
             player.sendTitle("" + ChatColor.GREEN + ChatColor.ITALIC + "Race",
                              "" + ChatColor.GREEN + "The Race Begins");
         }
+        tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
     }
 
@@ -316,6 +350,16 @@ public final class Race {
         }
     }
 
+    public static String formatTimeShort(long millis) {
+        int secs = ((int) (millis / 1000)) % 60;
+        int mins = (int) (millis / 1000 / 60);
+        if (mins > 0) {
+            return String.format("%d:%02d", mins, secs);
+        } else {
+            return String.format("%d", secs);
+        }
+    }
+
     public Racer getRacer(Player player) {
         for (Racer racer : tag.racers) {
             if (racer.uuid.equals(player.getUniqueId())) return racer;
@@ -326,5 +370,53 @@ public final class Race {
     void stopRace() {
         tag.racers.clear();
         tag.phase = Phase.IDLE;
+    }
+
+    Cuboid getLastCheckpoint(Racer racer) {
+        if (racer.checkpointIndex == 0) return tag.spawnArea;
+        if (racer.checkpointIndex > tag.checkpoints.size()) return tag.spawnArea;
+        return tag.checkpoints.get(racer.checkpointIndex - 1);
+    }
+
+    void onUseItem(Player player, ItemStack item, PlayerInteractEvent event) {
+        if (tag.phase != Phase.RACE) return;
+        if (item.getType() == Material.ENDER_PEARL && tag.type == RaceType.PARKOUR) {
+            event.setCancelled(true);
+            teleportToLastCheckpoint(player);
+            return;
+        }
+    }
+
+    void teleportToLastCheckpoint(Player player) {
+        Racer racer = getRacer(player);
+        if (racer == null) return;
+        Cuboid checkpoint = getLastCheckpoint(racer);
+        Block block = checkpoint.getBottomBlock(getWorld());
+        while (!block.isPassable()) block = block.getRelative(0, 1, 0);
+        Location loc = block.getLocation().add(0.5, 0.0, 0.5);
+        Location ploc = player.getLocation();
+        loc.setYaw(ploc.getYaw());
+        loc.setPitch(ploc.getPitch());
+        player.teleport(loc);
+        player.sendActionBar(ChatColor.GREEN + "Returned to last checkpoint!");
+        player.playSound(loc, Sound.ENTITY_ENDER_PEARL_THROW, SoundCategory.MASTER, 0.5f, 1.0f);
+    }
+
+    void onDamage(Player player, EntityDamageEvent event) {
+        event.setCancelled(true);
+        Racer racer = getRacer(player);
+        if (racer == null) return;
+        if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+            Bukkit.getScheduler().runTask(plugin, () -> teleportToLastCheckpoint(player));
+        }
+    }
+
+    public long getTime() {
+        switch (tag.phase) {
+        case RACE:
+        case FINISH:
+            return System.currentTimeMillis() - tag.startTime;
+        default: return 0;
+        }
     }
 }

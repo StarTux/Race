@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -21,8 +22,11 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.inventory.ItemStack;
 import org.spigotmc.event.entity.EntityDismountEvent;
 
 @RequiredArgsConstructor
@@ -35,8 +39,9 @@ public final class EventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (!plugin.races.isRace(event.getEntity().getLocation())) return;
-        if (event.getEntity() instanceof Player || event.getDamager() instanceof Player) {
+        Race race = plugin.races.at(event.getEntity().getLocation());
+        if (race == null) return;
+        if (event.getDamager() instanceof Player) {
             event.setCancelled(true);
         }
     }
@@ -55,11 +60,13 @@ public final class EventListener implements Listener {
         event.setRespawnLocation(race.getSpawnLocation());
     }
 
-    // No fall damage
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
-        if (!plugin.races.isRace(event.getEntity().getLocation())) return;
-        if (event.getEntity() instanceof Player) event.setCancelled(true);
+        Race race = plugin.races.at(event.getEntity().getLocation());
+        if (race == null) return;
+        if (event.getEntity() instanceof Player) {
+            race.onDamage((Player) event.getEntity(), event);
+        }
     }
 
     // No item damage
@@ -113,7 +120,7 @@ public final class EventListener implements Listener {
                 lines.add(ChatColor.GREEN + "Lap " + (theRacer.lap + 1) + "/" + race.tag.laps);
                 int rank = racers.indexOf(theRacer);
                 lines.add(ChatColor.GREEN + "You are #" + (rank + 1));
-                lines.add(ChatColor.GREEN + race.formatTime(System.currentTimeMillis() - race.tag.startTime));
+                lines.add(ChatColor.GREEN + race.formatTimeShort(race.getTime()));
             } else {
                 lines.add(ChatColor.GREEN + race.formatTime(theRacer.finishTime));
             }
@@ -162,5 +169,27 @@ public final class EventListener implements Listener {
         default:
             break;
         }
+    }
+
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        switch (event.getAction()) {
+        case RIGHT_CLICK_BLOCK:
+        case RIGHT_CLICK_AIR:
+            break;
+        default: return;
+        }
+        ItemStack item = event.getItem();
+        if (item == null || item.getType() == Material.AIR) return;
+        Player player = event.getPlayer();
+        Race race = plugin.races.at(player.getLocation());
+        if (race == null) return;
+        race.onUseItem(player, item, event);
+    }
+
+    @EventHandler
+    public void onItemDrop(PlayerDropItemEvent event) {
+        if (!plugin.races.isRace(event.getPlayer().getLocation())) return;
+        event.setCancelled(true);
     }
 }
