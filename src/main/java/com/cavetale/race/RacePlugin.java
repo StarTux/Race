@@ -1,7 +1,7 @@
 package com.cavetale.race;
 
-import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public final class RacePlugin extends JavaPlugin {
     final RaceCommand raceCommand = new RaceCommand(this);
@@ -24,6 +24,7 @@ public final class RacePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        races.onDisable();
         races.save();
     }
 

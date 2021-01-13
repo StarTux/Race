@@ -31,6 +31,12 @@ public final class Races {
         }
     }
 
+    public void onDisable() {
+        for (Race race : races) {
+            race.onDisable();
+        }
+    }
+
     public void save() {
         for (Race race : races) {
             race.save();

@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -25,7 +26,10 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.spigotmc.event.entity.EntityDismountEvent;
 
@@ -191,5 +195,33 @@ public final class EventListener implements Listener {
     public void onItemDrop(PlayerDropItemEvent event) {
         if (!plugin.races.isRace(event.getPlayer().getLocation())) return;
         event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        Race race = plugin.races.at(player.getLocation());
+        if (race != null) {
+            race.onQuit(player);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        Race race = plugin.races.at(event.getFrom());
+        if (race == null) return;
+        Player player = event.getPlayer();
+        race.onMoveFromTo(player, event.getFrom(), event.getTo());
+    }
+
+    @EventHandler
+    public void onVehicleMove(VehicleMoveEvent event) {
+        Race race = plugin.races.at(event.getFrom());
+        if (race == null) return;
+        List<Entity> passengerList = event.getVehicle().getPassengers();
+        if (passengerList == null || passengerList.isEmpty()) return;
+        if (!(passengerList.get(0) instanceof Player)) return;
+        Player player = (Player) passengerList.get(0);
+        race.onMoveFromTo(player, event.getFrom(), event.getTo());
     }
 }

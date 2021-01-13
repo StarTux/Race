@@ -1,5 +1,7 @@
 package com.cavetale.race;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import lombok.Value;
 import org.bukkit.Location;
@@ -9,12 +11,12 @@ import org.bukkit.block.Block;
 @Value
 public final class Cuboid {
     public static final Cuboid ZERO = new Cuboid(0, 0, 0, 0, 0, 0);
-    private final int ax;
-    private final int ay;
-    private final int az;
-    private final int bx;
-    private final int by;
-    private final int bz;
+    public final int ax;
+    public final int ay;
+    public final int az;
+    public final int bx;
+    public final int by;
+    public final int bz;
 
     public boolean contains(int x, int y, int z) {
         return x >= ax && x <= bx
@@ -137,6 +139,18 @@ public final class Cuboid {
 
     public Vec3i getCenter() {
         return new Vec3i((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
+    }
+
+    public List<Vec3i> enumerate() {
+        List<Vec3i> result = new ArrayList<>((bx - ax + 1) * (by - ay + 1) * (bz - az + 1));
+        for (int y = ay; y <= by; y += 1) {
+            for (int z = az; z <= bz; z += 1) {
+                for (int x = ax; x <= bx; x += 1) {
+                    result.add(new Vec3i(x, y, z));
+                }
+            }
+        }
+        return result;
     }
 
     public Block getBottomBlock(World world) {

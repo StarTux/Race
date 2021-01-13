@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import lombok.Value;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 
@@ -20,6 +21,10 @@ public final class Vec3i {
         return world.getBlockAt(x, y, z);
     }
 
+    public Location toLocation(World world) {
+        return toBlock(world).getLocation().add(0, 0.5, 0);
+    }
+
     public Vec3i add(int dx, int dy, int dz) {
         return new Vec3i(x + dx, y + dy, z + dz);
     }
@@ -35,8 +40,18 @@ public final class Vec3i {
         return dx * dx + dy * dy + dz * dz;
     }
 
+    public int simpleDistance(Vec3i other) {
+        return Math.max(Math.abs(other.y - y),
+                        Math.max(Math.abs(other.x - x),
+                                 Math.abs(other.z - z)));
+    }
+
     @Override
     public String toString() {
         return "" + x + "," + y + "," + z;
+    }
+
+    public boolean contains(Location loc) {
+        return x == loc.getBlockX() && y == loc.getBlockY() && z == loc.getBlockZ();
     }
 }

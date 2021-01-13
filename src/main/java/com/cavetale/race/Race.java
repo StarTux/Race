@@ -18,10 +18,12 @@ import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Strider;
+import org.bukkit.entity.Vehicle;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.BlockIterator;
+import org.bukkit.util.Vector;
 
 @RequiredArgsConstructor
 public final class Race {
@@ -42,6 +44,7 @@ public final class Race {
         RaceType type = RaceType.WALK;
         Cuboid area = Cuboid.ZERO;
         Position spawnLocation = Position.ZERO;
+        List<Vec3i> startVectors = new ArrayList<>();
         Cuboid spawnArea = Cuboid.ZERO;
         Phase phase = Phase.IDLE;
         List<Cuboid> checkpoints = new ArrayList<>();
@@ -50,6 +53,17 @@ public final class Race {
         long startTime = 0;
         int finishIndex = 0;
         int laps = 1;
+    }
+
+    public void onDisable() {
+        for (Racer racer : tag.racers) {
+            Player player = racer.getPlayer();
+            if (player == null) continue;
+            player.setWalkSpeed(0.2f);
+            if (player.getVehicle() != null) {
+                player.getVehicle().remove();
+            }
+        }
     }
 
     void tick(int ticks) {
@@ -90,7 +104,11 @@ public final class Race {
             tag.finishIndex = 0;
             for (Racer racer : tag.racers) {
                 setupCheckpoint(racer, tag.checkpoints.get(0));
+                Player player = racer.getPlayer();
                 racer.getPlayer().getInventory().clear();
+                if (!tag.type.isMounted()) {
+                    player.setWalkSpeed(0.2f);
+                }
             }
             return;
         }
@@ -118,10 +136,36 @@ public final class Race {
             default: break;
             }
         }
-        for (Player player : getRacePlayers()) {
-            if (!tag.spawnArea.contains(player.getLocation())) {
+        for (Racer racer : tag.racers) {
+            Player player = racer.getPlayer();
+            Location location = player.getLocation();
+            if (!racer.startVector.contains(location)) {
                 player.sendMessage(ChatColor.RED + "Please wait...");
-                player.teleport(getSpawnLocation());
+                player.teleport(getStartLocation(racer));
+            }
+        }
+    }
+
+    void progressCheckpoint(Player player, Racer racer) {
+        racer.checkpointIndex += 1;
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
+        if (racer.checkpointIndex >= tag.checkpoints.size()) {
+            racer.checkpointIndex = 0;
+            racer.lap += 1;
+            if (racer.lap >= tag.laps) {
+                racer.finished = true;
+                racer.finishTime = System.currentTimeMillis() - tag.startTime;
+                racer.finishIndex = tag.finishIndex++;
+                player.sendTitle("" + ChatColor.GREEN + "#" + (racer.finishIndex + 1),
+                                 "" + ChatColor.GREEN + formatTime(racer.finishTime));
+                for (Player target : getPresentPlayers()) {
+                    target.sendMessage(ChatColor.GREEN + player.getName()
+                                       + " finished #" + (racer.finishIndex + 1)
+                                       + " in " + formatTime(racer.finishTime));
+                }
+            } else {
+                player.sendTitle("" + ChatColor.GREEN + racer.lap + "/" + tag.laps,
+                                 "" + ChatColor.GREEN + "Lap " + (racer.lap + 1));
             }
         }
     }
@@ -145,35 +189,13 @@ public final class Race {
             Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
             Location loc = player.getLocation();
             if (checkpoint.contains(player.getEyeLocation()) || checkpoint.contains(player.getLocation().add(0, 2, 0))) {
-                racer.checkpointIndex += 1;
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
-                if (racer.checkpointIndex >= tag.checkpoints.size()) {
-                    racer.checkpointIndex = 0;
-                    racer.lap += 1;
-                    if (racer.lap >= tag.laps) {
-                        racer.finished = true;
-                        racer.finishTime = System.currentTimeMillis() - tag.startTime;
-                        racer.finishIndex = tag.finishIndex++;
-                        player.sendTitle("" + ChatColor.GREEN + "#" + (racer.finishIndex + 1),
-                                         "" + ChatColor.GREEN + formatTime(racer.finishTime));
-                        for (Player target : getPresentPlayers()) {
-                            target.sendMessage(ChatColor.GREEN + player.getName()
-                                               + " finished #" + (racer.finishIndex + 1)
-                                               + " in " + formatTime(racer.finishTime));
-                        }
-                        plugin.consoleCommand("ml add " + player.getName());
-                        continue;
-                    } else {
-                        player.sendTitle("" + ChatColor.GREEN + racer.lap + "/" + tag.laps,
-                                         "" + ChatColor.GREEN + "Lap " + (racer.lap + 1));
-                    }
-                }
+                progressCheckpoint(player, racer);
                 checkpoint = tag.checkpoints.get(racer.checkpointIndex);
             }
             setupCheckpoint(racer, checkpoint);
         }
         Collections.sort(tag.racers);
-        if (tag.type == RaceType.STRIDER) {
+        if (tag.type.isMounted()) {
             for (Racer racer : tag.racers) {
                 Player player = racer.getPlayer();
                 if (player == null) continue;
@@ -182,12 +204,8 @@ public final class Race {
                     if (racer.remountCooldown > 0) {
                         racer.remountCooldown -= 1;
                     } else {
-                        Strider strider = getWorld().spawn(player.getLocation(), Strider.class, e -> {
-                                e.setShivering(false);
-                                e.setAdult();
-                                e.setAgeLock(true);
-                            });
-                        strider.addPassenger(player);
+                        Vehicle vehicle = tag.type.spawnVehicle(player.getLocation());
+                        if (vehicle != null) vehicle.addPassenger(player);
                     }
                 }
                 if (!player.getInventory().contains(Material.WARPED_FUNGUS_ON_A_STICK)) {
@@ -227,9 +245,15 @@ public final class Race {
                 if (racer.finished) return false;
                 Player player = racer.getPlayer();
                 if (player == null || !player.isValid()) return true;
-                if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) return true;
+                if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
+                    player.setWalkSpeed(0.2f);
+                    return true;
+                }
                 Location loc = player.getLocation();
-                if (!isIn(loc.getWorld()) || !tag.area.containsHorizontal(loc)) return true;
+                if (!isIn(loc.getWorld()) || !tag.area.containsHorizontal(loc)) {
+                    player.setWalkSpeed(0.2f);
+                    return true;
+                }
                 return false;
             });
     }
@@ -304,17 +328,48 @@ public final class Race {
             .collect(Collectors.toList());
     }
 
+    Location getStartLocation(Racer racer) {
+        Vec3i vector = racer.startVector;
+        Cuboid firstCheckpoint = tag.checkpoints.get(0);
+        float yaw;
+        if (vector.x > firstCheckpoint.bx) {
+            // face west
+            yaw = 90f;
+        } else if (vector.z > firstCheckpoint.bz) {
+            // face north
+            yaw = 180f;
+        } else if (vector.x < firstCheckpoint.ax) {
+            // face east
+            yaw = 270f;
+        } else if (vector.z < firstCheckpoint.az) {
+            // face south
+            yaw = 0f;
+        } else {
+            yaw = 0f;
+        }
+        Location location = vector.toLocation(getWorld());
+        location.setYaw(yaw);
+        return location;
+    }
+
     public void startRace() {
         tag.racers.clear();
+        Vec3i center = tag.checkpoints.get(0).getCenter();
+        Collections.sort(tag.startVectors, (a, b) -> Integer.compare(center.simpleDistance(a), center.simpleDistance(b)));
+        int startVectorIndex = 0;
         for (Player player : getEligiblePlayers()) {
-            tag.racers.add(new Racer(player));
+            Racer racer = new Racer(player);
+            tag.racers.add(racer);
+            if (startVectorIndex >= tag.startVectors.size()) startVectorIndex = 0;
+            racer.startVector = tag.startVectors.get(startVectorIndex++);
             player.sendMessage(ChatColor.GREEN + "You joined the race!");
             player.sendActionBar(ChatColor.GREEN + "You joined the race!");
             player.getInventory().clear();
             player.setGameMode(GameMode.ADVENTURE);
-            player.teleport(getSpawnLocation());
+            player.teleport(getStartLocation(racer));
             player.sendTitle("" + ChatColor.GREEN + ChatColor.ITALIC + "Race",
                              "" + ChatColor.GREEN + "The Race Begins");
+            player.setWalkSpeed(0f);
         }
         tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
@@ -417,6 +472,35 @@ public final class Race {
         case FINISH:
             return System.currentTimeMillis() - tag.startTime;
         default: return 0;
+        }
+    }
+
+    public void onQuit(Player player) {
+        Racer racer = getRacer(player);
+        if (racer != null) return;
+        tag.racers.remove(racer);
+        player.setWalkSpeed(0.2f);
+    }
+
+    public void onMoveFromTo(Player player, Location from, Location to) {
+        if (tag.phase != Phase.RACE) return;
+        if (!from.getWorld().equals(to.getWorld())) return;
+        Racer racer = getRacer(player);
+        if (racer == null) return;
+        Vector direction = to.toVector().subtract(from.toVector());
+        double length = direction.length();
+        if (length < 0.01) return;
+        BlockIterator iter = new BlockIterator(from.getWorld(), from.toVector(), direction.normalize(), 0.0, 0);
+        Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+        int count = 0;
+        Block end = to.getBlock();
+        while (iter.hasNext()) {
+            if (count++ >= 16) break;
+            Block block = iter.next();
+            if (checkpoint.contains(block)) {
+                progressCheckpoint(player, racer);
+            }
+            if (block.equals(end)) break;
         }
     }
 }

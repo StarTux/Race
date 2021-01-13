@@ -3,6 +3,7 @@ package com.cavetale.race;
 import com.cavetale.race.command.CommandContext;
 import com.cavetale.race.command.CommandNode;
 import com.cavetale.race.command.CommandWarn;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,9 @@ public final class RaceCommand implements TabExecutor {
         checkpointNode.addChild("swap")
             .description("Swap two checkpoints")
             .caller(this::checkpointSwap);
+        root.addChild("startvector")
+            .completionList(Arrays.asList("clear", "add", "remove"))
+            .caller(this::startvector);
         plugin.getCommand("race").setExecutor(this);
     }
 
@@ -286,5 +290,48 @@ public final class RaceCommand implements TabExecutor {
         context.message(ChatColor.YELLOW + "Race stopped: " + race.name);
         race.save();
         return true;
+    }
+
+    boolean startvector(CommandContext context, CommandNode node, String[] args) {
+        if (args.length != 1) return false;
+        Player player = context.requirePlayer();
+        switch (args[0]) {
+        case "add": {
+            Race race = requireRace(player);
+            Cuboid cuboid = requireWorldEditSelection(player);
+            int count = 0;
+            for (Vec3i vector : cuboid.enumerate()) {
+                if (!race.tag.startVectors.contains(vector)) {
+                    race.tag.startVectors.add(vector);
+                    count += 1;
+                }
+            }
+            if (count > 0) race.save();
+            player.sendMessage(ChatColor.YELLOW + "Start vectors added: " + count);
+            return true;
+        }
+        case "remove": {
+            Race race = requireRace(player);
+            Cuboid cuboid = requireWorldEditSelection(player);
+            int count = 0;
+            for (Vec3i vector : cuboid.enumerate()) {
+                if (race.tag.startVectors.contains(vector)) {
+                    race.tag.startVectors.remove(vector);
+                    count += 1;
+                }
+            }
+            if (count > 0) race.save();
+            player.sendMessage(ChatColor.YELLOW + "Start vectors removed: " + count);
+            return true;
+        }
+        case "clear": {
+            Race race = requireRace(player);
+            int count = race.tag.startVectors.size();
+            race.tag.startVectors.clear();
+            if (count > 0) race.save();
+            player.sendMessage(ChatColor.YELLOW + "Start vectors cleared: " + count);
+        }
+        default: return false;
+        }
     }
 }
