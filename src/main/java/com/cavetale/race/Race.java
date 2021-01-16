@@ -3,7 +3,9 @@ package com.cavetale.race;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -17,11 +19,14 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.EnderCrystal;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Vehicle;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.CrossbowMeta;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
 
@@ -30,6 +35,7 @@ public final class Race {
     private final RacePlugin plugin;
     final String name;
     final Tag tag;
+    Map<Vec3i, Goody> goodies = new HashMap<>();
 
     public enum Phase {
         IDLE,
@@ -45,6 +51,7 @@ public final class Race {
         Cuboid area = Cuboid.ZERO;
         Position spawnLocation = Position.ZERO;
         List<Vec3i> startVectors = new ArrayList<>();
+        List<Vec3i> goodies = new ArrayList<>();
         Cuboid spawnArea = Cuboid.ZERO;
         Phase phase = Phase.IDLE;
         List<Cuboid> checkpoints = new ArrayList<>();
@@ -64,6 +71,7 @@ public final class Race {
                 player.getVehicle().remove();
             }
         }
+        clearGoodies();
     }
 
     void tick(int ticks) {
@@ -81,9 +89,10 @@ public final class Race {
         tag.phaseTicks += 1;
     }
 
-    void setPhase(Phase phase) {
+    void setPhase(final Phase phase) {
         tag.phase = phase;
         tag.phaseTicks = 0;
+        clearGoodies();
     }
 
     void tickEdit(int ticks) {
@@ -93,6 +102,7 @@ public final class Race {
         for (Cuboid area : tag.checkpoints) {
             area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         }
+        updateGoodies();
     }
 
     void tickStart(int ticks) {
@@ -105,7 +115,6 @@ public final class Race {
             for (Racer racer : tag.racers) {
                 setupCheckpoint(racer, tag.checkpoints.get(0));
                 Player player = racer.getPlayer();
-                racer.getPlayer().getInventory().clear();
                 if (!tag.type.isMounted()) {
                     player.setWalkSpeed(0.2f);
                 }
@@ -146,6 +155,47 @@ public final class Race {
         }
     }
 
+    void passThroughBlock(Player player, Racer racer, Block block) {
+        if (racer.finished) return;
+        Vec3i vec = Vec3i.of(block);
+        Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+        if (checkpoint.contains(vec)) {
+            progressCheckpoint(player, racer);
+            if (!racer.finished) {
+                checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+                setupCheckpoint(racer, checkpoint);
+            }
+        }
+        for (int y = -1; y <= 1; y += 1) {
+            for (int z = -1; z <= 1; z += 1) {
+                for (int x = -1; x <= 1; x += 1) {
+                    Vec3i vec2 = vec.add(x, y, z);
+                    Goody goody = goodies.get(vec2);
+                    if (goody == null || goody.entity == null || goody.cooldown > 0) continue;
+                    Location loc = goody.entity.getLocation();
+                    goody.entity.remove();
+                    goody.entity = null;
+                    goody.cooldown = 200;
+                    Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
+                            e.setPersistent(false);
+                            e.setFireworkMeta(Fireworks.randomFireworkMeta());
+                        });
+                    firework.detonate();
+                    giveGoody(player);
+                    loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.8f, 2.0f);
+                }
+            }
+        }
+    }
+
+    void giveGoody(Player player) {
+        ItemStack itemStack = new ItemStack(Material.CROSSBOW);
+        CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
+        meta.addChargedProjectile(new ItemStack(Material.SPECTRAL_ARROW));
+        itemStack.setItemMeta(meta);
+        player.getInventory().addItem(itemStack);
+    }
+
     void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
@@ -156,6 +206,11 @@ public final class Race {
                 racer.finished = true;
                 racer.finishTime = System.currentTimeMillis() - tag.startTime;
                 racer.finishIndex = tag.finishIndex++;
+                plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + (racer.finishIndex + 1));
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                if (racer.finishIndex == 0) {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Falcon");
+                }
                 player.sendTitle("" + ChatColor.GREEN + "#" + (racer.finishIndex + 1),
                                  "" + ChatColor.GREEN + formatTime(racer.finishTime));
                 for (Player target : getPresentPlayers()) {
@@ -163,6 +218,9 @@ public final class Race {
                                        + " finished #" + (racer.finishIndex + 1)
                                        + " in " + formatTime(racer.finishTime));
                 }
+                player.setGameMode(GameMode.SPECTATOR);
+                if (player.getVehicle() != null) player.getVehicle().remove();
+                player.getInventory().clear();
             } else {
                 player.sendTitle("" + ChatColor.GREEN + racer.lap + "/" + tag.laps,
                                  "" + ChatColor.GREEN + "Lap " + (racer.lap + 1));
@@ -171,30 +229,29 @@ public final class Race {
     }
 
     void tickRace(int ticks) {
-        for (Player player : getEligiblePlayers()) {
+        for (Player player : getWorld().getPlayers()) {
             if (getRacer(player) != null) continue;
-            if (tag.spawnArea.contains(player.getLocation())) {
-                tag.racers.add(new Racer(player));
-                player.sendMessage(ChatColor.GREEN + "You joined the race!");
-                player.sendActionBar(ChatColor.GREEN + "You joined the race!");
-                player.getInventory().clear();
-                player.setGameMode(GameMode.ADVENTURE);
+            if (!tag.area.contains(player.getLocation())) continue;
+            if (player.isOp()) continue;
+            if (player.getGameMode() != GameMode.SPECTATOR) {
+                player.setGameMode(GameMode.SPECTATOR);
             }
         }
         pruneRacers();
         for (Racer racer : tag.racers) {
+            if (!racer.racing) continue;
             if (racer.finished) continue;
             Player player = racer.getPlayer();
             if (player == null) continue;
             Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
             Location loc = player.getLocation();
-            if (checkpoint.contains(player.getEyeLocation()) || checkpoint.contains(player.getLocation().add(0, 2, 0))) {
-                progressCheckpoint(player, racer);
-                checkpoint = tag.checkpoints.get(racer.checkpointIndex);
-            }
-            setupCheckpoint(racer, checkpoint);
+            passThroughBlock(player, racer, loc.getBlock());
+            passThroughBlock(player, racer, loc.getBlock().getRelative(0, 2, 0));
         }
         Collections.sort(tag.racers);
+        for (int i = 0; i < tag.racers.size(); i += 1) {
+            tag.racers.get(i).rank = i;
+        }
         if (tag.type.isMounted()) {
             for (Racer racer : tag.racers) {
                 Player player = racer.getPlayer();
@@ -208,26 +265,9 @@ public final class Race {
                         if (vehicle != null) vehicle.addPassenger(player);
                     }
                 }
-                if (!player.getInventory().contains(Material.WARPED_FUNGUS_ON_A_STICK)) {
-                    player.getInventory().addItem(new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK));
-                }
-                if (!player.getInventory().contains(Material.COMPASS)) {
-                    player.getInventory().addItem(new ItemStack(Material.COMPASS));
-                }
             }
         }
-        if (tag.type == RaceType.PARKOUR) {
-            for (Racer racer : tag.racers) {
-                Player player = racer.getPlayer();
-                if (player == null) continue;
-                if (!player.getInventory().contains(Material.ENDER_PEARL)) {
-                    player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
-                }
-                if (!player.getInventory().contains(Material.COMPASS)) {
-                    player.getInventory().addItem(new ItemStack(Material.COMPASS));
-                }
-            }
-        }
+        updateGoodies();
     }
 
     void setupCheckpoint(Racer racer, Cuboid checkpoint) {
@@ -317,8 +357,8 @@ public final class Race {
 
     public List<Player> getEligiblePlayers() {
         return getWorld().getPlayers().stream()
+            .filter(p -> !"Cavetale".equals(p.getName()))
             .filter(p -> tag.area.containsHorizontal(p.getLocation()))
-            .filter(p -> p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
             .collect(Collectors.toList());
     }
 
@@ -357,19 +397,29 @@ public final class Race {
         Vec3i center = tag.checkpoints.get(0).getCenter();
         Collections.sort(tag.startVectors, (a, b) -> Integer.compare(center.simpleDistance(a), center.simpleDistance(b)));
         int startVectorIndex = 0;
-        for (Player player : getEligiblePlayers()) {
+        List<Player> players = getEligiblePlayers();
+        Collections.shuffle(players);
+        for (Player player : players) {
             Racer racer = new Racer(player);
+            racer.racing = true;
             tag.racers.add(racer);
             if (startVectorIndex >= tag.startVectors.size()) startVectorIndex = 0;
             racer.startVector = tag.startVectors.get(startVectorIndex++);
             player.sendMessage(ChatColor.GREEN + "You joined the race!");
             player.sendActionBar(ChatColor.GREEN + "You joined the race!");
             player.getInventory().clear();
+            player.getInventory().addItem(new ItemStack(Material.COMPASS));
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(getStartLocation(racer));
             player.sendTitle("" + ChatColor.GREEN + ChatColor.ITALIC + "Race",
                              "" + ChatColor.GREEN + "The Race Begins");
             player.setWalkSpeed(0f);
+            if (tag.type == RaceType.STRIDER) {
+                player.getInventory().addItem(new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK));
+            }
+            if (tag.type == RaceType.PARKOUR) {
+                player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
+            }
         }
         tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
@@ -425,6 +475,7 @@ public final class Race {
     void stopRace() {
         tag.racers.clear();
         tag.phase = Phase.IDLE;
+        clearGoodies();
     }
 
     Cuboid getLastCheckpoint(Racer racer) {
@@ -497,10 +548,37 @@ public final class Race {
         while (iter.hasNext()) {
             if (count++ >= 16) break;
             Block block = iter.next();
-            if (checkpoint.contains(block)) {
-                progressCheckpoint(player, racer);
-            }
+            passThroughBlock(player, racer, block);
             if (block.equals(end)) break;
         }
+    }
+
+    void updateGoodies() {
+        for (Vec3i vector : tag.goodies) {
+            Goody goody = goodies.computeIfAbsent(vector, v -> new Goody(v));
+            if (goody.cooldown > 0) {
+                goody.cooldown -= 1;
+                continue;
+            }
+            if (goody.entity == null || !goody.entity.isValid()) {
+                goody.entity = null;
+                Location location = goody.where.toLocation(getWorld());
+                if (!location.isChunkLoaded()) continue;
+                goody.entity = location.getWorld().spawn(location, EnderCrystal.class, e -> {
+                        e.setPersistent(false);
+                        e.setShowingBottom(false);
+                    });
+            }
+        }
+    }
+
+    void clearGoodies() {
+        for (Goody goody : goodies.values()) {
+            if (goody.entity != null) {
+                goody.entity.remove();
+                goody.entity = null;
+            }
+        }
+        goodies.clear();
     }
 }

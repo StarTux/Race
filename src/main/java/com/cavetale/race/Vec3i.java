@@ -17,12 +17,16 @@ public final class Vec3i {
         return new Vec3i(block.getX(), block.getY(), block.getZ());
     }
 
+    public static Vec3i of(Location loc) {
+        return new Vec3i(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
+    }
+
     public Block toBlock(World world) {
         return world.getBlockAt(x, y, z);
     }
 
     public Location toLocation(World world) {
-        return toBlock(world).getLocation().add(0, 0.5, 0);
+        return toBlock(world).getLocation().add(0.5, 0, 0.5);
     }
 
     public Vec3i add(int dx, int dy, int dz) {

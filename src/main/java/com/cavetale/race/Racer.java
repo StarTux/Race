@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+/**
+ * Persistenct type, maintained by Race.
+ */
 @RequiredArgsConstructor
 public final class Racer implements Comparable<Racer> {
     final UUID uuid;
@@ -17,6 +20,8 @@ public final class Racer implements Comparable<Racer> {
     int finishIndex;
     int remountCooldown;
     Vec3i startVector;
+    boolean racing = false;
+    int rank = 0;
 
     Racer(final Player player) {
         this.uuid = player.getUniqueId();

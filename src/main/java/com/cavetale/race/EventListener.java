@@ -5,10 +5,11 @@ import com.cavetale.sidebar.Priority;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -19,10 +20,12 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
@@ -31,6 +34,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.CrossbowMeta;
 import org.spigotmc.event.entity.EntityDismountEvent;
 
 @RequiredArgsConstructor
@@ -41,12 +45,34 @@ public final class EventListener implements Listener {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        Race race = plugin.races.at(event.getEntity().getLocation());
+        if (race == null) return;
+        if (event.getEntity() instanceof Player) {
+            race.onDamage((Player) event.getEntity(), event);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null) return;
         if (event.getDamager() instanceof Player) {
             event.setCancelled(true);
+        }
+        if (event.getDamager() instanceof AbstractArrow && event.getEntity() instanceof Player && event.getCause() == DamageCause.ENTITY_EXPLOSION) {
+            event.setCancelled(true);
+            Player player = (Player) event.getEntity();
+            Racer racer = race.getRacer(player);
+            if (racer == null) return;
+            Entity vehicle = player.getVehicle();
+            if (vehicle != null) {
+                vehicle.remove();
+                player.sendMessage(ChatColor.RED + "Mount destroyed");
+                racer.remountCooldown = 40;
+            }
+            event.getDamager().remove();
         }
     }
 
@@ -64,15 +90,6 @@ public final class EventListener implements Listener {
         event.setRespawnLocation(race.getSpawnLocation());
     }
 
-    @EventHandler
-    public void onEntityDamage(EntityDamageEvent event) {
-        Race race = plugin.races.at(event.getEntity().getLocation());
-        if (race == null) return;
-        if (event.getEntity() instanceof Player) {
-            race.onDamage((Player) event.getEntity(), event);
-        }
-    }
-
     // No item damage
     @EventHandler
     public void onPlayerItemDamage(PlayerItemDamageEvent event) {
@@ -84,8 +101,8 @@ public final class EventListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile proj = event.getEntity();
         if (!plugin.races.isRace(proj.getLocation())) return;
-        if (proj.getType() == EntityType.ARROW) {
-            proj.getWorld().createExplosion(proj, 1.0f);
+        if (proj instanceof AbstractArrow) {
+            proj.getWorld().createExplosion(proj, 2.0f);
             proj.remove();
         }
     }
@@ -122,8 +139,7 @@ public final class EventListener implements Listener {
         if (theRacer != null) {
             if (!theRacer.finished) {
                 lines.add(ChatColor.GREEN + "Lap " + (theRacer.lap + 1) + "/" + race.tag.laps);
-                int rank = racers.indexOf(theRacer);
-                lines.add(ChatColor.GREEN + "You are #" + (rank + 1));
+                lines.add(ChatColor.GREEN + "You are #" + (theRacer.rank + 1));
                 lines.add(ChatColor.GREEN + race.formatTimeShort(race.getTime()));
             } else {
                 lines.add(ChatColor.GREEN + race.formatTime(theRacer.finishTime));
@@ -158,6 +174,7 @@ public final class EventListener implements Listener {
         Player player = (Player) event.getEntity();
         Racer racer = race.getRacer(player);
         if (racer == null) return;
+        player.sendMessage(ChatColor.RED + "Dismounted");
         racer.remountCooldown = 40;
     }
 
@@ -223,5 +240,40 @@ public final class EventListener implements Listener {
         if (!(passengerList.get(0) instanceof Player)) return;
         Player player = (Player) passengerList.get(0);
         race.onMoveFromTo(player, event.getFrom(), event.getTo());
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    void onProjectileLaunch(ProjectileLaunchEvent event) {
+        Projectile projectile = event.getEntity();
+        Race race = plugin.races.at(projectile.getLocation());
+        if (race == null) return;
+        if (!(projectile.getShooter() instanceof Player)) return;
+        Player player = (Player) projectile.getShooter();
+        Racer racer = race.getRacer(player);
+        if (racer == null) {
+            event.setCancelled(true);
+            return;
+        }
+        if (race.tag.type.isMounted() && player.getVehicle() == null) {
+            event.setCancelled(true);
+            return;
+        }
+        Bukkit.getScheduler().runTask(plugin, () -> {
+                ItemStack itemStack;
+                itemStack = player.getInventory().getItemInMainHand();
+                if (itemStack != null && itemStack.getType() == Material.CROSSBOW) {
+                    CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
+                    if (!meta.hasChargedProjectiles()) {
+                        player.getInventory().setItemInMainHand(null);
+                    }
+                }
+                itemStack = player.getInventory().getItemInOffHand();
+                if (itemStack != null && itemStack.getType() == Material.CROSSBOW) {
+                    CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
+                    if (!meta.hasChargedProjectiles()) {
+                        player.getInventory().setItemInOffHand(null);
+                    }
+                }
+            });
     }
 }

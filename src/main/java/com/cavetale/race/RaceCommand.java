@@ -66,6 +66,9 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("startvector")
             .completionList(Arrays.asList("clear", "add", "remove"))
             .caller(this::startvector);
+        root.addChild("goodies")
+            .completionList(Arrays.asList("clear", "add", "remove"))
+            .caller(this::goodies);
         plugin.getCommand("race").setExecutor(this);
     }
 
@@ -147,8 +150,13 @@ public final class RaceCommand implements TabExecutor {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        race.setPhase(Race.Phase.EDIT);
-        context.message("" + ChatColor.YELLOW + race.name + ": Edit mode enabled");
+        if (race.tag.phase == Race.Phase.EDIT) {
+            race.setPhase(Race.Phase.IDLE);
+            context.message("" + ChatColor.YELLOW + race.name + ": Edit mode disabled");
+        } else {
+            race.setPhase(Race.Phase.EDIT);
+            context.message("" + ChatColor.YELLOW + race.name + ": Edit mode enabled");
+        }
         return true;
     }
 
@@ -330,6 +338,45 @@ public final class RaceCommand implements TabExecutor {
             race.tag.startVectors.clear();
             if (count > 0) race.save();
             player.sendMessage(ChatColor.YELLOW + "Start vectors cleared: " + count);
+            return true;
+        }
+        default: return false;
+        }
+    }
+
+    boolean goodies(CommandContext context, CommandNode node, String[] args) {
+        if (args.length != 1) return false;
+        Player player = context.requirePlayer();
+        switch (args[0]) {
+        case "add": {
+            Race race = requireRace(player);
+            Vec3i vec = Vec3i.of(player.getLocation());
+            if (race.tag.goodies.contains(vec)) {
+                throw new CommandWarn("Goodie already exists: " + vec);
+            }
+            race.tag.goodies.add(vec);
+            race.save();
+            player.sendMessage(ChatColor.YELLOW + "Goodie added: " + vec);
+            return true;
+        }
+        case "remove": {
+            Race race = requireRace(player);
+            Vec3i vec = Vec3i.of(player.getLocation());
+            if (!race.tag.goodies.contains(vec)) {
+                throw new CommandWarn("No goodie here: " + vec);
+            }
+            race.tag.goodies.remove(vec);
+            race.save();
+            player.sendMessage(ChatColor.YELLOW + "Goodie removed: " + vec);
+            return true;
+        }
+        case "clear": {
+            Race race = requireRace(player);
+            int count = race.tag.goodies.size();
+            race.tag.goodies.clear();
+            if (count > 0) race.save();
+            player.sendMessage(ChatColor.YELLOW + "Goodies cleared: " + count);
+            return true;
         }
         default: return false;
         }
