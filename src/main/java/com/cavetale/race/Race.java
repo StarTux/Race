@@ -1,5 +1,7 @@
 package com.cavetale.race;
 
+import com.cavetale.race.util.Items;
+import com.cavetale.race.util.Rnd;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +29,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
 
@@ -166,6 +169,8 @@ public final class Race {
                 setupCheckpoint(racer, checkpoint);
             }
         }
+        long now = System.currentTimeMillis();
+        if (getRacer(player).goodyCooldown > now) return;
         for (int y = -1; y <= 1; y += 1) {
             for (int z = -1; z <= 1; z += 1) {
                 for (int x = -1; x <= 1; x += 1) {
@@ -183,17 +188,59 @@ public final class Race {
                     firework.detonate();
                     giveGoody(player);
                     loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.8f, 2.0f);
+                    getRacer(player).goodyCooldown = now + 10000L;
+                    return;
                 }
             }
         }
     }
 
+    ItemStack getHorseGoody(Player player) {
+        ItemStack item = null;
+        int chance = 1;
+        if (Rnd.nextInt(chance++) == 0) {
+            item = Items.loadedCrossbow(Items.potionItem(Material.TIPPED_ARROW, PotionEffectType.SLOW, 80));
+        }
+        if (Rnd.nextInt(chance++) == 0) {
+            item = Items.loadedCrossbow(Items.potionItem(Material.TIPPED_ARROW, PotionEffectType.LEVITATION, 60));
+        }
+        if (Rnd.nextInt(chance++) == 0) {
+            item = Items.potionItem(Material.SPLASH_POTION, PotionEffectType.SPEED, 200);
+        }
+        if (Rnd.nextInt(chance++) == 0) {
+            item = Items.potionItem(Material.SPLASH_POTION, PotionEffectType.INVISIBILITY, 200);
+        }
+        return item;
+    }
+
     void giveGoody(Player player) {
-        ItemStack itemStack = new ItemStack(Material.CROSSBOW);
-        CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
-        meta.addChargedProjectile(new ItemStack(Material.SPECTRAL_ARROW));
-        itemStack.setItemMeta(meta);
-        player.getInventory().addItem(itemStack);
+        switch (tag.type) {
+        case ICE_BOAT: {
+            ItemStack itemStack = new ItemStack(Material.CROSSBOW);
+            CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
+            meta.addChargedProjectile(new ItemStack(Material.SPECTRAL_ARROW));
+            itemStack.setItemMeta(meta);
+            player.getInventory().addItem(itemStack);
+            break;
+        }
+        case HORSE:
+        case PIG: {
+            ItemStack item;
+            item = getHorseGoody(player);
+            ItemStack old = player.getInventory().getItemInMainHand();
+            ItemStack old2 = player.getInventory().getItemInOffHand();
+            if (old == null || old.getAmount() == 0) {
+                player.getInventory().setItemInMainHand(item);
+            } else if (old2 == null || old2.getAmount() == 0) {
+                player.getInventory().setItemInOffHand(item);
+            } else {
+                player.getInventory().addItem(item);
+            }
+            break;
+        }
+        default:
+            break;
+        }
     }
 
     void progressCheckpoint(Player player, Racer racer) {
@@ -209,7 +256,9 @@ public final class Race {
                 plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + (racer.finishIndex + 1));
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                 if (racer.finishIndex == 0) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Falcon");
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey");
+                } else {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Equestrian");
                 }
                 player.sendTitle("" + ChatColor.GREEN + "#" + (racer.finishIndex + 1),
                                  "" + ChatColor.GREEN + formatTime(racer.finishTime));
@@ -222,7 +271,7 @@ public final class Race {
                 if (player.getVehicle() != null) player.getVehicle().remove();
                 player.getInventory().clear();
             } else {
-                player.sendTitle("" + ChatColor.GREEN + racer.lap + "/" + tag.laps,
+                player.sendTitle("" + ChatColor.GREEN + (racer.lap + 1) + "/" + tag.laps,
                                  "" + ChatColor.GREEN + "Lap " + (racer.lap + 1));
             }
         }
@@ -247,6 +296,13 @@ public final class Race {
             Location loc = player.getLocation();
             passThroughBlock(player, racer, loc.getBlock());
             passThroughBlock(player, racer, loc.getBlock().getRelative(0, 2, 0));
+            try {
+                Cuboid cp = tag.checkpoints.get(racer.checkpointIndex);
+                Vec3i pos = Vec3i.of(racer.getPlayer().getLocation().getBlock());
+                racer.checkpointDistance = pos.distanceSquared(cp.getCenter());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         Collections.sort(tag.racers);
         for (int i = 0; i < tag.racers.size(); i += 1) {
@@ -417,6 +473,9 @@ public final class Race {
             if (tag.type == RaceType.STRIDER) {
                 player.getInventory().addItem(new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK));
             }
+            if (tag.type == RaceType.PIG) {
+                player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
+            }
             if (tag.type == RaceType.PARKOUR) {
                 player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
             }
@@ -580,5 +639,9 @@ public final class Race {
             }
         }
         goodies.clear();
+    }
+
+    public RaceType getRaceType() {
+        return tag.type;
     }
 }

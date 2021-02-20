@@ -2,6 +2,7 @@ package com.cavetale.race;
 
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
+import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.AbstractArrow;
+import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -30,6 +33,7 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
@@ -52,6 +56,10 @@ public final class EventListener implements Listener {
         if (event.getEntity() instanceof Player) {
             race.onDamage((Player) event.getEntity(), event);
         }
+        if (event.getEntity() instanceof EnderCrystal) {
+            event.setCancelled(true);
+            return;
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
@@ -73,6 +81,9 @@ public final class EventListener implements Listener {
                 racer.remountCooldown = 40;
             }
             event.getDamager().remove();
+        }
+        if (event.getDamager() instanceof Firework) {
+            event.setCancelled(true);
         }
     }
 
@@ -100,10 +111,25 @@ public final class EventListener implements Listener {
     @EventHandler
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile proj = event.getEntity();
-        if (!plugin.races.isRace(proj.getLocation())) return;
-        if (proj instanceof AbstractArrow) {
-            proj.getWorld().createExplosion(proj, 2.0f);
-            proj.remove();
+        Race race = plugin.races.at(proj.getLocation());
+        if (race == null) return;
+        switch (race.getRaceType()) {
+        case ICE_BOAT:
+            if (proj instanceof AbstractArrow) {
+                proj.getWorld().createExplosion(proj, 2.0f);
+                proj.remove();
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    @EventHandler
+    public void onProjectileCollide(ProjectileCollideEvent event) {
+        if (event.getEntity() instanceof Firework) {
+            event.setCancelled(true);
+            return;
         }
     }
 
@@ -147,11 +173,11 @@ public final class EventListener implements Listener {
         }
         for (Racer racer : racers) {
             int index = i++;
-            if (index > 9) break;
+            if (index > 8) break;
             if (racer.finished) {
-                lines.add("" + ChatColor.GOLD + "#" + (index + 1) + "  " + racer.name);
+                lines.add("" + ChatColor.GOLD + "#" + (index + 1) + " " + racer.name);
             } else {
-                lines.add("" + ChatColor.GREEN + "#" + (index + 1) + ChatColor.WHITE + "  " + racer.name);
+                lines.add("" + ChatColor.GREEN + "#" + (index + 1) + ChatColor.WHITE + " " + racer.name);
             }
         }
         if (!lines.isEmpty()) {
@@ -275,5 +301,12 @@ public final class EventListener implements Listener {
                     }
                 }
             });
+    }
+
+    @EventHandler
+    void onPlayerPickupItem(PlayerPickupItemEvent event) {
+        Race race = plugin.races.at(event.getPlayer().getLocation());
+        if (race == null) return;
+        event.setCancelled(true);
     }
 }

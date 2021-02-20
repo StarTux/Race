@@ -1,0 +1,45 @@
+package com.cavetale.race.util;
+
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.CrossbowMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionData;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
+
+public final class Items {
+    private Items() { }
+
+    public static ItemStack potionItem(ItemStack itemStack, PotionType potionType) {
+        PotionMeta meta = (PotionMeta) itemStack.getItemMeta();
+        meta.setBasePotionData(new PotionData(potionType));
+        itemStack.setItemMeta(meta);
+        return itemStack;
+    }
+
+    public static ItemStack potionItem(Material material, PotionType potionType) {
+        return potionItem(new ItemStack(material), potionType);
+    }
+
+    public static ItemStack potionItem(Material material, PotionEffectType type, int duration) {
+        ItemStack itemStack = new ItemStack(material);
+        PotionMeta meta = (PotionMeta) itemStack.getItemMeta();
+        PotionEffect effect = new PotionEffect(type, duration, 0, true, false, true);
+        meta.addCustomEffect(effect, true);
+        meta.setColor(effect.getColor());
+        meta.setDisplayName(type.getName());
+        itemStack.setItemMeta(meta);
+        return itemStack;
+    }
+
+    public static ItemStack loadedCrossbow(ItemStack loaded) {
+        ItemStack itemStack = new ItemStack(Material.CROSSBOW);
+        CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
+        meta.addChargedProjectile(loaded);
+        meta.setDisplayName(loaded.getItemMeta().getDisplayName());
+        itemStack.setItemMeta(meta);
+        return itemStack;
+    }
+}

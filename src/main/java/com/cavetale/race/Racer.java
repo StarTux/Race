@@ -22,6 +22,7 @@ public final class Racer implements Comparable<Racer> {
     Vec3i startVector;
     boolean racing = false;
     int rank = 0;
+    long goodyCooldown = 0L;
 
     Racer(final Player player) {
         this.uuid = player.getUniqueId();

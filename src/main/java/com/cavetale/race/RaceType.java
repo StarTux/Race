@@ -1,21 +1,36 @@
 package com.cavetale.race;
 
+import com.cavetale.race.util.Rnd;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.TreeSpecies;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Boat;
+import org.bukkit.entity.Horse;
+import org.bukkit.entity.Pig;
 import org.bukkit.entity.Strider;
 import org.bukkit.entity.Vehicle;
+import org.bukkit.inventory.ItemStack;
 
 public enum RaceType {
     WALK,
     STRIDER,
     PARKOUR,
-    ICE_BOAT;
+    ICE_BOAT,
+    HORSE,
+    PIG;
 
     public boolean isMounted() {
-        return this == STRIDER
-            || this == ICE_BOAT;
+        switch (this) {
+        case STRIDER:
+        case ICE_BOAT:
+        case HORSE:
+        case PIG:
+            return true;
+        default:
+            return false;
+        }
     }
 
     Vehicle spawnVehicle(Location location) {
@@ -34,6 +49,31 @@ public enum RaceType {
                     e.setPersistent(false);
                     e.setWoodType(theSpecies);
                 });
+        }
+        case HORSE: {
+            Horse horse = location.getWorld().spawn(location, Horse.class, e -> {
+                    e.setPersistent(false);
+                    e.setAdult();
+                    e.setAgeLock(true);
+                    e.setColor(Rnd.pick(Horse.Color.values()));
+                    e.setStyle(Rnd.pick(Horse.Style.values()));
+                    double variance = 0.01;
+                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.29);
+                    e.getAttribute(Attribute.HORSE_JUMP_STRENGTH).setBaseValue(0.7);
+                    e.setTamed(true);
+                    e.getInventory().setSaddle(new ItemStack(Material.SADDLE));
+                });
+            return horse;
+        }
+        case PIG: {
+            Pig pig = location.getWorld().spawn(location, Pig.class, e -> {
+                    e.setPersistent(false);
+                    e.setAdult();
+                    e.setAgeLock(true);
+                    e.setSaddle(true);
+                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.25);
+                });
+            return pig;
         }
         default:
             return null;
