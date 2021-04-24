@@ -257,7 +257,7 @@ public final class Race {
                 plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + (racer.finishIndex + 1));
                 if (tag.event) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
-                    if (racer.finishIndex == 0) {
+                    if (racer.finishIndex < 3) {
                         switch (tag.type) {
                         case HORSE:
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey");
