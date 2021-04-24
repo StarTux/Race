@@ -1,8 +1,8 @@
 package com.cavetale.race;
 
-import com.cavetale.race.command.CommandContext;
-import com.cavetale.race.command.CommandNode;
-import com.cavetale.race.command.CommandWarn;
+import com.cavetale.core.command.CommandContext;
+import com.cavetale.core.command.CommandNode;
+import com.cavetale.core.command.CommandWarn;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,11 +64,17 @@ public final class RaceCommand implements TabExecutor {
             .description("Swap two checkpoints")
             .caller(this::checkpointSwap);
         root.addChild("startvector")
-            .completionList(Arrays.asList("clear", "add", "remove"))
+            .completableList(Arrays.asList("clear", "add", "remove"))
             .caller(this::startvector);
         root.addChild("goodies")
-            .completionList(Arrays.asList("clear", "add", "remove"))
+            .completableList(Arrays.asList("clear", "add", "remove"))
             .caller(this::goodies);
+        root.addChild("event").denyTabCompletion()
+            .description("Toggle event mode")
+            .playerCaller(this::event);
+        root.addChild("setarea").denyTabCompletion()
+            .description("Set race area")
+            .playerCaller(this::setArea);
         plugin.getCommand("race").setExecutor(this);
     }
 
@@ -187,18 +193,24 @@ public final class RaceCommand implements TabExecutor {
         context.message("" + ChatColor.YELLOW + race.name + ": " + checkpoints.size() + " checkpoint(s)");
         int i = 0;
         for (Cuboid cuboid : checkpoints) {
-            context.message("  " + (i++) + ChatColor.YELLOW + cuboid.getShortInfo());
+            context.message("  " + (i++) + " " + ChatColor.YELLOW + cuboid.getShortInfo());
         }
         return true;
     }
 
     boolean checkpointAdd(CommandContext context, CommandNode node, String[] args) {
-        if (args.length != 0) return false;
+        if (args.length > 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
         Cuboid cuboid = requireWorldEditSelection(player);
         List<Cuboid> checkpoints = race.getCheckpoints();
-        checkpoints.add(cuboid);
+        int index = args.length == 0
+            ? checkpoints.size()
+            : requireInt(args[0]);
+        if (index < 0 || index > checkpoints.size()) {
+            throw new CommandWarn("Invalid index: " + index);
+        }
+        checkpoints.add(index, cuboid);
         race.setCheckpoints(checkpoints);
         race.save();
         context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint added: " + cuboid.getShortInfo());
@@ -380,5 +392,26 @@ public final class RaceCommand implements TabExecutor {
         }
         default: return false;
         }
+    }
+
+    boolean event(Player player, String[] args) {
+        Race race = requireRace(player);
+        race.tag.event = !race.tag.event;
+        race.save();
+        if (race.tag.event) {
+            player.sendMessage(ChatColor.GREEN + "Event mode enabled");
+        } else {
+            player.sendMessage(ChatColor.GREEN + "Event mode disabled");
+        }
+        return true;
+    }
+
+    boolean setArea(Player player, String[] args) {
+        Race race = requireRace(player);
+        Cuboid cuboid = requireWorldEditSelection(player);
+        race.tag.area = cuboid;
+        race.save();
+        player.sendMessage(ChatColor.GREEN + "Event area reset: " + race.tag.area);
+        return true;
     }
 }

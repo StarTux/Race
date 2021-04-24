@@ -63,6 +63,7 @@ public final class Race {
         long startTime = 0;
         int finishIndex = 0;
         int laps = 1;
+        boolean event;
     }
 
     public void onDisable() {
@@ -254,11 +255,21 @@ public final class Race {
                 racer.finishTime = System.currentTimeMillis() - tag.startTime;
                 racer.finishIndex = tag.finishIndex++;
                 plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + (racer.finishIndex + 1));
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
-                if (racer.finishIndex == 0) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey");
-                } else {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Equestrian");
+                if (tag.event) {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+                    if (racer.finishIndex == 0) {
+                        switch (tag.type) {
+                        case HORSE:
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey");
+                            break;
+                        case ICE_BOAT:
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Drifter");
+                            break;
+                        default:
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Falcon");
+                            break;
+                        }
+                    }
                 }
                 player.sendTitle("" + ChatColor.GREEN + "#" + (racer.finishIndex + 1),
                                  "" + ChatColor.GREEN + formatTime(racer.finishTime));
@@ -300,6 +311,7 @@ public final class Race {
                 Cuboid cp = tag.checkpoints.get(racer.checkpointIndex);
                 Vec3i pos = Vec3i.of(racer.getPlayer().getLocation().getBlock());
                 racer.checkpointDistance = pos.distanceSquared(cp.getCenter());
+                cp.highlight(player.getWorld(), ticks, 8, 8, l -> player.spawnParticle(Particle.END_ROD, l, 1, 0.0, 0.0, 0.0, 0.0));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -333,7 +345,6 @@ public final class Race {
         racer.checkpointDistance = pos.distanceSquared(center);
         Player player = racer.getPlayer();
         player.setCompassTarget(center.toBlock(getWorld()).getLocation());
-        checkpoint.highlight(getWorld(), tag.phaseTicks, 8, 2, loc -> player.spawnParticle(Particle.CLOUD, loc, 1, 0.0, 0.0, 0.0, 0.0));
     }
 
     void pruneRacers() {
