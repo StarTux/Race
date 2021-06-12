@@ -8,10 +8,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 @RequiredArgsConstructor
 public final class RaceCommand implements TabExecutor {
@@ -22,6 +27,12 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("list")
             .caller(this::list)
             .description("List all races");
+        root.addChild("info")
+            .playerCaller(this::info)
+            .description("Info about current race course");
+        root.addChild("test")
+            .playerCaller(this::test)
+            .description("Test");
         root.addChild("create")
             .caller(this::create)
             .description("Create a new race");
@@ -119,6 +130,24 @@ public final class RaceCommand implements TabExecutor {
         for (Race race : races) {
             context.message("  " + ChatColor.YELLOW + race.listString());
         }
+        return true;
+    }
+
+    boolean info(Player player, String[] args) {
+        if (args.length != 0) return false;
+        Race race = requireRace(player);
+        if (race == null) throw new CommandWarn("There is no race here!");
+        ChatColor a = ChatColor.GRAY;
+        ChatColor b = ChatColor.WHITE;
+        player.sendMessage(a + "worldName " + b + race.tag.worldName);
+        player.sendMessage(a + "area " + b + race.tag.area);
+        player.sendMessage(a + "spawnArea " + b + race.tag.spawnArea);
+        player.sendMessage(a + "spawnLocation " + b + race.tag.spawnLocation.simpleString());
+        player.sendMessage(a + "startVectors " + b + race.tag.startVectors.size());
+        player.sendMessage(a + "checkpoints " + b + race.tag.checkpoints.size());
+        player.sendMessage(a + "goodies " + b + race.tag.goodies.size());
+        player.sendMessage(a + "laps " + b + race.tag.laps);
+        player.sendMessage(a + "event " + b + race.tag.event);
         return true;
     }
 
@@ -412,6 +441,17 @@ public final class RaceCommand implements TabExecutor {
         race.tag.area = cuboid;
         race.save();
         player.sendMessage(ChatColor.GREEN + "Event area reset: " + race.tag.area);
+        return true;
+    }
+
+    boolean test(Player player, String[] args) {
+        ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
+        PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
+        //meta.setBasePotionData(new PotionData(PotionType.SPEED, false, false));
+        meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 5, 2, true, true, true), true);
+        meta.setDisplayName("Speed III");
+        speedSplashPotion.setItemMeta(meta);
+        player.getInventory().addItem(speedSplashPotion);
         return true;
     }
 }

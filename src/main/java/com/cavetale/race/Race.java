@@ -9,8 +9,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -24,12 +26,17 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TNTPrimed;
 import org.bukkit.entity.Vehicle;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionData;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
 
@@ -39,6 +46,7 @@ public final class Race {
     final String name;
     final Tag tag;
     Map<Vec3i, Goody> goodies = new HashMap<>();
+    final Random random = new Random();
 
     public enum Phase {
         IDLE,
@@ -171,7 +179,7 @@ public final class Race {
             }
         }
         long now = System.currentTimeMillis();
-        if (getRacer(player).goodyCooldown > now) return;
+        if (racer.goodyCooldown > now) return;
         for (int y = -1; y <= 1; y += 1) {
             for (int z = -1; z <= 1; z += 1) {
                 for (int x = -1; x <= 1; x += 1) {
@@ -187,9 +195,15 @@ public final class Race {
                             e.setFireworkMeta(Fireworks.randomFireworkMeta());
                         });
                     firework.detonate();
-                    giveGoody(player);
+                    giveGoody(player, racer);
                     loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.8f, 2.0f);
-                    getRacer(player).goodyCooldown = now + 10000L;
+                    if (racer.rank == 0) {
+                        racer.goodyCooldown = now + 10000L;
+                    } else if (racer.rank < 3) {
+                        racer.goodyCooldown = now + 7500L;
+                    } else {
+                        racer.goodyCooldown = now + 5000L;
+                    }
                     return;
                 }
             }
@@ -214,7 +228,13 @@ public final class Race {
         return item;
     }
 
-    void giveGoody(Player player) {
+    @Value
+    public static final class GoodyDrop {
+        private final int weight;
+        private final ItemStack item;
+    }
+
+    void giveGoody(Player player, Racer racer) {
         switch (tag.type) {
         case ICE_BOAT: {
             ItemStack itemStack = new ItemStack(Material.CROSSBOW);
@@ -226,16 +246,55 @@ public final class Race {
         }
         case HORSE:
         case PIG: {
-            ItemStack item;
-            item = getHorseGoody(player);
-            ItemStack old = player.getInventory().getItemInMainHand();
-            ItemStack old2 = player.getInventory().getItemInOffHand();
-            if (old == null || old.getAmount() == 0) {
-                player.getInventory().setItemInMainHand(item);
-            } else if (old2 == null || old2.getAmount() == 0) {
-                player.getInventory().setItemInOffHand(item);
-            } else {
-                player.getInventory().addItem(item);
+            List<GoodyDrop> pool = new ArrayList<>();
+            pool.add(new GoodyDrop(1, new ItemStack(Material.TNT)));
+            if (!player.getInventory().contains(Material.CARROT_ON_A_STICK, 4)) {
+                pool.add(new GoodyDrop(2, new ItemStack(Material.CARROT_ON_A_STICK)));
+            }
+            if (racer.rank < 3) {
+                ItemStack healSplashPotion = new ItemStack(Material.LINGERING_POTION);
+                PotionMeta meta = (PotionMeta) healSplashPotion.getItemMeta();
+                meta.setBasePotionData(new PotionData(PotionType.SLOWNESS, false, true));
+                healSplashPotion.setItemMeta(meta);
+                pool.add(new GoodyDrop(2, healSplashPotion));
+            }
+            if (racer.rank > 0) {
+                ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
+                PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
+                //meta.setBasePotionData(new PotionData(PotionType.SPEED, false, false));
+                meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 5, 0, true, true, true), true);
+                meta.setDisplayName(ChatColor.WHITE + "Speed");
+                speedSplashPotion.setItemMeta(meta);
+                pool.add(new GoodyDrop(3, speedSplashPotion));
+            }
+            if (racer.rank > 2) {
+                ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
+                PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
+                //meta.setBasePotionData(new PotionData(PotionType.SPEED, false, true)); // upgraded
+                meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 5, 2, true, true, true), true);
+                meta.setDisplayName(ChatColor.WHITE + "Speed III");
+                speedSplashPotion.setItemMeta(meta);
+                pool.add(new GoodyDrop(3, speedSplashPotion));
+            }
+            if (racer.rank > 5) {
+                ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
+                PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
+                //meta.setBasePotionData(new PotionData(PotionType.SPEED, true, false)); // extended
+                meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 10, 2, true, true, true), true);
+                meta.setDisplayName(ChatColor.WHITE + "Speed III");
+                speedSplashPotion.setItemMeta(meta);
+                pool.add(new GoodyDrop(3, speedSplashPotion));
+            }
+            if (pool.isEmpty()) return;
+            int total = 0;
+            for (GoodyDrop drop : pool) total += drop.weight;
+            int roll = random.nextInt(total);
+            for (GoodyDrop drop : pool) {
+                roll -= drop.weight;
+                if (roll <= 0) {
+                    player.getInventory().addItem(drop.item.clone());
+                    break;
+                }
             }
             break;
         }
@@ -264,6 +323,9 @@ public final class Race {
                             break;
                         case ICE_BOAT:
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Drifter");
+                            break;
+                        case PIG:
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " PigRacer BaconRacer");
                             break;
                         default:
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Falcon");
@@ -333,6 +395,10 @@ public final class Race {
                         if (vehicle != null) vehicle.addPassenger(player);
                     }
                 }
+                if (!player.getInventory().contains(Material.CARROT_ON_A_STICK)) {
+                    player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
+                }
+                player.getInventory().remove(Material.FISHING_ROD);
             }
         }
         updateGoodies();
@@ -424,7 +490,7 @@ public final class Race {
 
     public List<Player> getEligiblePlayers() {
         return getWorld().getPlayers().stream()
-            .filter(p -> !"Cavetale".equals(p.getName()))
+            .filter(p -> !(p.isPermissionSet("group.streamer") && p.hasPermission("group.streamer")))
             .filter(p -> tag.area.containsHorizontal(p.getLocation()))
             .collect(Collectors.toList());
     }
@@ -556,10 +622,18 @@ public final class Race {
 
     void onUseItem(Player player, ItemStack item, PlayerInteractEvent event) {
         if (tag.phase != Phase.RACE) return;
+        Racer racer = getRacer(player);
+        if (racer == null) return;
         if (item.getType() == Material.ENDER_PEARL && tag.type == RaceType.PARKOUR) {
             event.setCancelled(true);
             teleportToLastCheckpoint(player);
             return;
+        }
+        if (item.getType() == Material.TNT) {
+            item.subtract(1);
+            player.getWorld().spawn(player.getEyeLocation(), TNTPrimed.class, e -> {
+                    e.setFuseTicks(80);
+                });
         }
     }
 

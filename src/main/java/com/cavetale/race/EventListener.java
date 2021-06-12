@@ -9,12 +9,15 @@ import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -85,6 +88,23 @@ public final class EventListener implements Listener {
         if (event.getDamager() instanceof Firework) {
             event.setCancelled(true);
         }
+        if (race.tag.type == RaceType.PIG && event.getCause() == DamageCause.ENTITY_EXPLOSION
+            && event.getEntity() instanceof Pig && event.getDamager() instanceof TNTPrimed) {
+            Pig pig = (Pig) event.getEntity();
+            Player player = null;
+            Racer racer = null;
+            for (Entity passenger : pig.getPassengers()) {
+                if (passenger instanceof Player) {
+                    player = (Player) passenger;
+                    racer = race.getRacer(player);
+                    if (racer != null) break;
+                }
+            }
+            if (racer == null) return;
+            pig.setHealth(0.0);
+            player.sendMessage(ChatColor.RED + "Mount destroyed");
+            racer.remountCooldown = 10;
+        }
     }
 
     @EventHandler
@@ -104,8 +124,10 @@ public final class EventListener implements Listener {
     // No item damage
     @EventHandler
     public void onPlayerItemDamage(PlayerItemDamageEvent event) {
-        if (!plugin.races.isRace(event.getPlayer().getLocation())) return;
-        event.setCancelled(true);
+        if (plugin.races.isRace(event.getPlayer().getLocation())) {
+            if (event.getItem().getType() == Material.CARROT_ON_A_STICK) return;
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -166,9 +188,16 @@ public final class EventListener implements Listener {
             if (!theRacer.finished) {
                 lines.add(ChatColor.GREEN + "Lap " + (theRacer.lap + 1) + "/" + race.tag.laps);
                 lines.add(ChatColor.GREEN + "You are #" + (theRacer.rank + 1));
-                lines.add(ChatColor.GREEN + race.formatTimeShort(race.getTime()));
+                lines.add(ChatColor.GREEN + "Time " + ChatColor.WHITE + race.formatTimeShort(race.getTime()));
             } else {
                 lines.add(ChatColor.GREEN + race.formatTime(theRacer.finishTime));
+            }
+            if (race.tag.type == RaceType.PIG) {
+                if (player.getVehicle() instanceof Pig) {
+                    Pig pig = (Pig) player.getVehicle();
+                    double speed = pig.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
+                    lines.add(ChatColor.GREEN + "Speed " + ChatColor.WHITE + (int) Math.round(speed * 100.0));
+                }
             }
         }
         for (Racer racer : racers) {
@@ -201,7 +230,13 @@ public final class EventListener implements Listener {
         Racer racer = race.getRacer(player);
         if (racer == null) return;
         player.sendMessage(ChatColor.RED + "Dismounted");
-        racer.remountCooldown = 40;
+        switch (race.tag.type) {
+        case PIG:
+            racer.remountCooldown = 10;
+            break;
+        default:
+            racer.remountCooldown = 40;
+        }
     }
 
     @EventHandler
