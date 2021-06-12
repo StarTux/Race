@@ -192,7 +192,7 @@ public final class Race {
                     goody.cooldown = 200;
                     Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
                             e.setPersistent(false);
-                            e.setFireworkMeta(Fireworks.randomFireworkMeta());
+                            e.setFireworkMeta(Fireworks.simpleFireworkMeta());
                         });
                     firework.detonate();
                     giveGoody(player, racer);
@@ -247,43 +247,58 @@ public final class Race {
         case HORSE:
         case PIG: {
             List<GoodyDrop> pool = new ArrayList<>();
-            pool.add(new GoodyDrop(1, new ItemStack(Material.TNT)));
             if (!player.getInventory().contains(Material.CARROT_ON_A_STICK, 4)) {
-                pool.add(new GoodyDrop(2, new ItemStack(Material.CARROT_ON_A_STICK)));
+                pool.add(new GoodyDrop(10, new ItemStack(Material.CARROT_ON_A_STICK)));
+            }
+            if (racer.rank < 2) {
+                ItemStack slowSplashPotion = new ItemStack(Material.LINGERING_POTION);
+                PotionMeta meta = (PotionMeta) slowSplashPotion.getItemMeta();
+                meta.setBasePotionData(new PotionData(PotionType.SLOWNESS, false, false));
+                slowSplashPotion.setItemMeta(meta);
+                pool.add(new GoodyDrop(1, slowSplashPotion));
+                pool.add(new GoodyDrop(1, new ItemStack(Material.TNT)));
+                pool.add(new GoodyDrop(3, new ItemStack(Material.CARROT_ON_A_STICK)));
             }
             if (racer.rank < 3) {
-                ItemStack healSplashPotion = new ItemStack(Material.LINGERING_POTION);
-                PotionMeta meta = (PotionMeta) healSplashPotion.getItemMeta();
-                meta.setBasePotionData(new PotionData(PotionType.SLOWNESS, false, true));
-                healSplashPotion.setItemMeta(meta);
-                pool.add(new GoodyDrop(2, healSplashPotion));
-            }
-            if (racer.rank > 0) {
                 ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
                 PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
                 //meta.setBasePotionData(new PotionData(PotionType.SPEED, false, false));
                 meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 5, 0, true, true, true), true);
                 meta.setDisplayName(ChatColor.WHITE + "Speed");
                 speedSplashPotion.setItemMeta(meta);
-                pool.add(new GoodyDrop(3, speedSplashPotion));
-            }
-            if (racer.rank > 2) {
+                pool.add(new GoodyDrop(5, speedSplashPotion));
+            } else if (racer.rank < 5) {
                 ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
                 PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
                 //meta.setBasePotionData(new PotionData(PotionType.SPEED, false, true)); // upgraded
-                meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 5, 2, true, true, true), true);
-                meta.setDisplayName(ChatColor.WHITE + "Speed III");
+                meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 10, 1, true, true, true), true);
+                meta.setDisplayName(ChatColor.WHITE + "Speed II");
                 speedSplashPotion.setItemMeta(meta);
-                pool.add(new GoodyDrop(3, speedSplashPotion));
-            }
-            if (racer.rank > 5) {
+                pool.add(new GoodyDrop(5, speedSplashPotion));
+            } else if (racer.rank < 9) {
                 ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
                 PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
                 //meta.setBasePotionData(new PotionData(PotionType.SPEED, true, false)); // extended
                 meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 10, 2, true, true, true), true);
                 meta.setDisplayName(ChatColor.WHITE + "Speed III");
                 speedSplashPotion.setItemMeta(meta);
-                pool.add(new GoodyDrop(3, speedSplashPotion));
+                pool.add(new GoodyDrop(5, speedSplashPotion));
+            } else if (racer.rank < 11) {
+                ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
+                PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
+                //meta.setBasePotionData(new PotionData(PotionType.SPEED, true, false)); // extended
+                meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 10, 3, true, true, true), true);
+                meta.setDisplayName(ChatColor.WHITE + "Speed IV");
+                speedSplashPotion.setItemMeta(meta);
+                pool.add(new GoodyDrop(5, speedSplashPotion));
+            } else {
+                ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
+                PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
+                //meta.setBasePotionData(new PotionData(PotionType.SPEED, true, false)); // extended
+                meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 10, 4, true, true, true), true);
+                meta.setDisplayName(ChatColor.WHITE + "Speed 5");
+                speedSplashPotion.setItemMeta(meta);
+                pool.add(new GoodyDrop(6, speedSplashPotion));
             }
             if (pool.isEmpty()) return;
             int total = 0;

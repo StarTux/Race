@@ -29,21 +29,19 @@ final class Fireworks {
         }
     }
 
-    public static FireworkMeta randomFireworkMeta() {
-        return randomFireworkMeta(randomFireworkEffectType());
-    }
-
-    public static FireworkMeta randomFireworkMeta(FireworkEffect.Type type) {
+    public static FireworkMeta randomFireworkMeta(FireworkEffect.Type type, int amount) {
         FireworkMeta meta = (FireworkMeta) Bukkit.getServer().getItemFactory()
             .getItemMeta(Material.FIREWORK_ROCKET);
         FireworkEffect.Builder builder = FireworkEffect.builder().with(type);
-        int amount = type == FireworkEffect.Type.CREEPER || type == FireworkEffect.Type.STAR
-            ? 1 : 3 + random.nextInt(5);
         for (int i = 0; i < amount; i += 1) {
             builder.withColor(randomColor());
             meta.addEffect(builder.build());
         }
         meta.setPower(0);
         return meta;
+    }
+
+    public static FireworkMeta simpleFireworkMeta() {
+        return randomFireworkMeta(FireworkEffect.Type.BURST, 1);
     }
 }

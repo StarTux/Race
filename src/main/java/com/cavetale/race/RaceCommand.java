@@ -148,6 +148,11 @@ public final class RaceCommand implements TabExecutor {
         player.sendMessage(a + "goodies " + b + race.tag.goodies.size());
         player.sendMessage(a + "laps " + b + race.tag.laps);
         player.sendMessage(a + "event " + b + race.tag.event);
+        int count = 0;
+        for (Racer racer : race.tag.racers) {
+            if (racer.racing) count += 1;
+        }
+        player.sendMessage(a + "racing " + b + count);
         return true;
     }
 

@@ -204,7 +204,11 @@ public final class EventListener implements Listener {
             int index = i++;
             if (index > 8) break;
             if (racer.finished) {
-                lines.add("" + ChatColor.GOLD + "#" + (index + 1) + " " + racer.name);
+                if (racer.rank < 3) {
+                    lines.add("" + ChatColor.GOLD + ChatColor.BOLD + "#" + (index + 1) + " " + racer.name);
+                } else {
+                    lines.add("" + ChatColor.GOLD + "#" + (index + 1) + " " + racer.name);
+                }
             } else {
                 lines.add("" + ChatColor.GREEN + "#" + (index + 1) + ChatColor.WHITE + " " + racer.name);
             }
