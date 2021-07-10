@@ -139,7 +139,7 @@ public final class EventListener implements Listener {
         case BOAT:
         case ICE_BOAT:
             if (proj instanceof AbstractArrow) {
-                proj.getWorld().createExplosion(proj, 1.0f);
+                proj.getWorld().createExplosion(proj, 4.0f);
                 proj.remove();
             }
             break;
