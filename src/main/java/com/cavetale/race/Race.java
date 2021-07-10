@@ -698,6 +698,7 @@ public final class Race {
         }
         if (item.getType() == Material.LIGHTNING_ROD) {
             item.subtract(1);
+            int count = 0;
             for (Racer otherRacer : tag.racers) {
                 if (racer == otherRacer) continue;
                 if (racer.rank <= otherRacer.rank) continue;
@@ -708,8 +709,10 @@ public final class Race {
                     if (vehicle != null) vehicle.remove();
                     otherRacer.remountCooldown = 60;
                     otherPlayer.sendMessage(Component.text("Struck by lightning!", NamedTextColor.GOLD));
+                    count += 1;
                 }
             }
+            player.sendMessage(Component.text("Struck " + count + " players ahead of you with lightning!", NamedTextColor.GOLD));
         }
     }
 

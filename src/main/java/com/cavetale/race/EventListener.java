@@ -13,6 +13,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
@@ -29,6 +30,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
@@ -139,7 +141,7 @@ public final class EventListener implements Listener {
         case BOAT:
         case ICE_BOAT:
             if (proj instanceof AbstractArrow) {
-                proj.getWorld().createExplosion(proj, 4.0f);
+                proj.getWorld().createExplosion(proj, 3.0f);
                 proj.remove();
             }
             break;
@@ -322,7 +324,6 @@ public final class EventListener implements Listener {
         }
         if (race.tag.type.isMounted() && player.getVehicle() == null) {
             event.setCancelled(true);
-            return;
         }
         Bukkit.getScheduler().runTask(plugin, () -> {
                 ItemStack itemStack;
@@ -346,6 +347,14 @@ public final class EventListener implements Listener {
     @EventHandler
     void onPlayerPickupItem(PlayerPickupItemEvent event) {
         Race race = plugin.races.at(event.getPlayer().getLocation());
+        if (race == null) return;
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    void onEntitySpawn(EntitySpawnEvent event) {
+        if (event.getEntityType() != EntityType.DROPPED_ITEM) return;
+        Race race = plugin.races.at(event.getLocation());
         if (race == null) return;
         event.setCancelled(true);
     }
