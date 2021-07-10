@@ -136,9 +136,10 @@ public final class EventListener implements Listener {
         Race race = plugin.races.at(proj.getLocation());
         if (race == null) return;
         switch (race.getRaceType()) {
+        case BOAT:
         case ICE_BOAT:
             if (proj instanceof AbstractArrow) {
-                proj.getWorld().createExplosion(proj, 2.0f);
+                proj.getWorld().createExplosion(proj, 1.0f);
                 proj.remove();
             }
             break;

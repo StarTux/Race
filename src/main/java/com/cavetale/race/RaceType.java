@@ -18,6 +18,7 @@ public enum RaceType {
     STRIDER,
     PARKOUR,
     ICE_BOAT,
+    BOAT,
     HORSE,
     PIG;
 
@@ -25,6 +26,7 @@ public enum RaceType {
         switch (this) {
         case STRIDER:
         case ICE_BOAT:
+        case BOAT:
         case HORSE:
         case PIG:
             return true;
@@ -42,6 +44,7 @@ public enum RaceType {
                     e.setAdult();
                     e.setAgeLock(true);
                 });
+        case BOAT:
         case ICE_BOAT: {
             TreeSpecies[] species = TreeSpecies.values();
             TreeSpecies theSpecies = species[ThreadLocalRandom.current().nextInt(species.length)];

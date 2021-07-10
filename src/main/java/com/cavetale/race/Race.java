@@ -134,6 +134,9 @@ public final class Race {
                 if (!tag.type.isMounted()) {
                     player.setWalkSpeed(0.2f);
                 }
+                player.setFlying(false);
+                player.setAllowFlight(false);
+                player.setFlySpeed(0.1f);
             }
             return;
         }
@@ -167,6 +170,9 @@ public final class Race {
             if (!racer.startVector.contains(location)) {
                 player.sendMessage(ChatColor.RED + "Please wait...");
                 player.teleport(getStartLocation(racer));
+                player.setAllowFlight(true);
+                player.setFlying(true);
+                player.setFlySpeed(0.0f);
             }
         }
     }
@@ -240,6 +246,7 @@ public final class Race {
 
     void giveGoody(Player player, Racer racer) {
         switch (tag.type) {
+        case BOAT:
         case ICE_BOAT: {
             ItemStack itemStack = new ItemStack(Material.CROSSBOW);
             CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
@@ -343,6 +350,9 @@ public final class Race {
                         case ICE_BOAT:
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Drifter");
                             break;
+                        case BOAT:
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Sailor");
+                            break;
                         case PIG:
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " PigRacer BaconRacer");
                             break;
@@ -414,10 +424,12 @@ public final class Race {
                         if (vehicle != null) vehicle.addPassenger(player);
                     }
                 }
-                if (!player.getInventory().contains(Material.CARROT_ON_A_STICK)) {
-                    player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
+                if (tag.type == RaceType.PIG) {
+                    if (!player.getInventory().contains(Material.CARROT_ON_A_STICK)) {
+                        player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
+                    }
+                    player.getInventory().remove(Material.FISHING_ROD);
                 }
-                player.getInventory().remove(Material.FISHING_ROD);
             }
         }
         updateGoodies();
@@ -563,6 +575,9 @@ public final class Race {
             player.getInventory().addItem(new ItemStack(Material.COMPASS));
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(getStartLocation(racer));
+            player.setAllowFlight(true);
+            player.setFlying(true);
+            player.setFlySpeed(0.0f);
             player.sendTitle("" + ChatColor.GREEN + ChatColor.ITALIC + "Race",
                              "" + ChatColor.GREEN + "The Race Begins");
             player.setWalkSpeed(0f);
