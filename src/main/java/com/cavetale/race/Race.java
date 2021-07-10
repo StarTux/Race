@@ -4,6 +4,7 @@ import com.cavetale.race.util.Items;
 import com.cavetale.race.util.Rnd;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +14,9 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -24,6 +28,7 @@ import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EnderCrystal;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
@@ -72,6 +77,7 @@ public final class Race {
         int finishIndex = 0;
         int laps = 1;
         boolean event;
+        int rareItemsAvailable = 0;
     }
 
     public void onDisable() {
@@ -127,6 +133,7 @@ public final class Race {
         if (ticksLeft < 0) {
             setPhase(Phase.RACE);
             tag.startTime = System.currentTimeMillis();
+            tag.rareItemsAvailable = tag.laps * 3;
             tag.finishIndex = 0;
             for (Racer racer : tag.racers) {
                 setupCheckpoint(racer, tag.checkpoints.get(0));
@@ -246,7 +253,27 @@ public final class Race {
 
     void giveGoody(Player player, Racer racer) {
         switch (tag.type) {
-        case BOAT:
+        case BOAT: {
+            if (tag.rareItemsAvailable > 0 && racer.rank > 3 && random.nextDouble() < 0.05) {
+                ItemStack itemStack = new ItemStack(Material.LIGHTNING_ROD);
+                itemStack.editMeta(meta -> {
+                        meta.displayName(Component.text("Strike Lighning", NamedTextColor.GOLD)
+                                         .decoration(TextDecoration.ITALIC, false));
+                        meta.lore(Arrays.asList(Component.text("Strike everyone ahead of", NamedTextColor.GRAY)
+                                                .decoration(TextDecoration.ITALIC, false),
+                                                Component.text("you with lightning!", NamedTextColor.GRAY)
+                                                .decoration(TextDecoration.ITALIC, false)));
+                    });
+                player.getInventory().addItem(itemStack);
+                return;
+            }
+            ItemStack itemStack = new ItemStack(Material.CROSSBOW);
+            CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
+            meta.addChargedProjectile(new ItemStack(Material.SPECTRAL_ARROW));
+            itemStack.setItemMeta(meta);
+            player.getInventory().addItem(itemStack);
+            break;
+        }
         case ICE_BOAT: {
             ItemStack itemStack = new ItemStack(Material.CROSSBOW);
             CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
@@ -668,6 +695,21 @@ public final class Race {
             player.getWorld().spawn(player.getEyeLocation(), TNTPrimed.class, e -> {
                     e.setFuseTicks(80);
                 });
+        }
+        if (item.getType() == Material.LIGHTNING_ROD) {
+            item.subtract(1);
+            for (Racer otherRacer : tag.racers) {
+                if (racer == otherRacer) continue;
+                if (racer.rank <= otherRacer.rank) continue;
+                Player otherPlayer = otherRacer.getPlayer();
+                if (otherPlayer != null) {
+                    otherPlayer.getWorld().strikeLightningEffect(otherPlayer.getLocation());
+                    Entity vehicle = otherPlayer.getVehicle();
+                    if (vehicle != null) vehicle.remove();
+                    otherRacer.remountCooldown = 60;
+                    otherPlayer.sendMessage(Component.text("Struck by lightning!", NamedTextColor.GOLD));
+                }
+            }
         }
     }
 

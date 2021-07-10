@@ -81,7 +81,7 @@ public final class EventListener implements Listener {
             if (vehicle != null) {
                 vehicle.remove();
                 player.sendMessage(ChatColor.RED + "Mount destroyed");
-                racer.remountCooldown = 40;
+                racer.remountCooldown = 60;
             }
             event.getDamager().remove();
         }
