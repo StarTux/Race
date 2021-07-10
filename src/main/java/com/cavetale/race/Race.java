@@ -255,6 +255,7 @@ public final class Race {
         switch (tag.type) {
         case BOAT: {
             if (tag.rareItemsAvailable > 0 && racer.rank > 3 && random.nextDouble() < 0.05) {
+                tag.rareItemsAvailable -= 1;
                 ItemStack itemStack = new ItemStack(Material.LIGHTNING_ROD);
                 itemStack.editMeta(meta -> {
                         meta.displayName(Component.text("Strike Lighning", NamedTextColor.GOLD)
