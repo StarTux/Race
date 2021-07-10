@@ -114,6 +114,10 @@ public final class Race {
         for (Cuboid area : tag.checkpoints) {
             area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         }
+        for (Vec3i v : tag.startVectors) {
+            Location loc = v.toLocation(getWorld());
+            loc.getWorld().spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0);
+        }
         updateGoodies();
     }
 
