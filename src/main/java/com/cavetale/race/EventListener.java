@@ -35,6 +35,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -357,5 +358,16 @@ public final class EventListener implements Listener {
         Race race = plugin.races.at(event.getLocation());
         if (race == null) return;
         event.setCancelled(true);
+    }
+
+    @EventHandler
+    void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        Race race = plugin.races.at(event.getPlayer().getLocation());
+        if (race == null) return;
+        if (event.getRightClicked().getType() == EntityType.BOAT) {
+            if (race.tag.type == RaceType.BOAT || race.tag.type == RaceType.ICE_BOAT) {
+                event.setCancelled(true);
+            }
+        }
     }
 }
