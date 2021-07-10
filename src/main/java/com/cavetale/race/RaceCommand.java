@@ -140,6 +140,7 @@ public final class RaceCommand implements TabExecutor {
         ChatColor a = ChatColor.GRAY;
         ChatColor b = ChatColor.WHITE;
         player.sendMessage(a + "worldName " + b + race.tag.worldName);
+        player.sendMessage(a + "type " + b + race.tag.type);
         player.sendMessage(a + "area " + b + race.tag.area);
         player.sendMessage(a + "spawnArea " + b + race.tag.spawnArea);
         player.sendMessage(a + "spawnLocation " + b + race.tag.spawnLocation.simpleString());
