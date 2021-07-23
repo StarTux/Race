@@ -14,6 +14,7 @@ public final class Racer implements Comparable<Racer> {
     final String name;
     int checkpointIndex = 0;
     int checkpointDistance = 0;
+    int checkpointDistanceIncreaseTicks = 0;
     int lap = 0;
     boolean finished = false;
     long finishTime = 0;

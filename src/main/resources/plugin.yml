@@ -7,7 +7,7 @@ description: Racing Minigame
 website: https://cavetale.com
 
 load: STARTUP
-api-version: 1.13
+api-version: 1.17
 
 depend: [Sidebar]
 softdepend: []

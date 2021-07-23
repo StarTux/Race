@@ -1,5 +1,7 @@
 package com.cavetale.race.util;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
@@ -41,5 +43,13 @@ public final class Items {
         meta.setDisplayName(loaded.getItemMeta().getDisplayName());
         itemStack.setItemMeta(meta);
         return itemStack;
+    }
+
+    public static ItemStack label(Material material, Component label) {
+        ItemStack item = new ItemStack(material);
+        item.editMeta(meta -> {
+                meta.displayName(label.decoration(TextDecoration.ITALIC, false));
+            });
+        return item;
     }
 }

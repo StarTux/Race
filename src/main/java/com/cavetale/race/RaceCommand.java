@@ -86,6 +86,9 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("setarea").denyTabCompletion()
             .description("Set race area")
             .playerCaller(this::setArea);
+        root.addChild("mount").denyTabCompletion()
+            .description("Summon a mount for yourself")
+            .playerCaller(this::mount);
         plugin.getCommand("race").setExecutor(this);
     }
 
@@ -151,7 +154,7 @@ public final class RaceCommand implements TabExecutor {
         player.sendMessage(a + "event " + b + race.tag.event);
         int count = 0;
         for (Racer racer : race.tag.racers) {
-            if (racer.racing) count += 1;
+            if (racer.racing && !racer.finished) count += 1;
         }
         player.sendMessage(a + "racing " + b + count);
         return true;
@@ -436,7 +439,7 @@ public final class RaceCommand implements TabExecutor {
         if (race.tag.event) {
             player.sendMessage(ChatColor.GREEN + "Event mode enabled");
         } else {
-            player.sendMessage(ChatColor.GREEN + "Event mode disabled");
+            player.sendMessage(ChatColor.RED + "Event mode disabled");
         }
         return true;
     }
@@ -458,6 +461,16 @@ public final class RaceCommand implements TabExecutor {
         meta.setDisplayName("Speed III");
         speedSplashPotion.setItemMeta(meta);
         player.getInventory().addItem(speedSplashPotion);
+        return true;
+    }
+
+    boolean mount(Player player, String[] args) {
+        Race race = requireRace(player);
+        if (!race.tag.type.isMounted()) {
+            throw new CommandWarn("Not mounted: " + race.tag.type);
+        }
+        race.tag.type.spawnVehicle(player.getLocation());
+        player.sendMessage(ChatColor.YELLOW + "Vehicle spawned");
         return true;
     }
 }

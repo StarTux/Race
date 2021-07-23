@@ -360,10 +360,12 @@ public final class Race {
     void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
+        racer.checkpointDistanceIncreaseTicks = 0;
         if (racer.checkpointIndex >= tag.checkpoints.size()) {
             racer.checkpointIndex = 0;
             racer.lap += 1;
             if (racer.lap >= tag.laps) {
+                racer.racing = false;
                 racer.finished = true;
                 racer.finishTime = System.currentTimeMillis() - tag.startTime;
                 racer.finishIndex = tag.finishIndex++;
@@ -429,7 +431,18 @@ public final class Race {
             try {
                 Cuboid cp = tag.checkpoints.get(racer.checkpointIndex);
                 Vec3i pos = Vec3i.of(racer.getPlayer().getLocation().getBlock());
+                int oldCheckpointDistance = racer.checkpointDistance;
                 racer.checkpointDistance = pos.distanceSquared(cp.getCenter());
+                if (racer.checkpointDistance > oldCheckpointDistance) {
+                    racer.checkpointDistanceIncreaseTicks += 1;
+                } else if (racer.checkpointDistance < oldCheckpointDistance) {
+                    racer.checkpointDistanceIncreaseTicks = 0;
+                }
+                if (racer.checkpointDistanceIncreaseTicks >= 10 && (tag.phaseTicks % 20) == 0) {
+                    player.sendTitle(ChatColor.RED + "Reverse",
+                                     ChatColor.RED + "Turn Around",
+                                     0, 15, 0);
+                }
                 cp.highlight(player.getWorld(), ticks, 8, 8, l -> player.spawnParticle(Particle.END_ROD, l, 1, 0.0, 0.0, 0.0, 0.0));
             } catch (Exception e) {
                 e.printStackTrace();
@@ -600,7 +613,8 @@ public final class Race {
             player.sendMessage(ChatColor.GREEN + "You joined the race!");
             player.sendActionBar(ChatColor.GREEN + "You joined the race!");
             player.getInventory().clear();
-            player.getInventory().addItem(new ItemStack(Material.COMPASS));
+            player.getInventory().addItem(Items.label(Material.COMPASS,
+                                                      Component.text("Points at next Checkpoint", NamedTextColor.YELLOW)));
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(getStartLocation(racer));
             player.setAllowFlight(true);
@@ -615,9 +629,8 @@ public final class Race {
             if (tag.type == RaceType.PIG) {
                 player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
             }
-            if (tag.type == RaceType.PARKOUR) {
-                player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
-            }
+            player.getInventory().setItem(8, Items.label(Material.ENDER_PEARL,
+                                                         Component.text("Return to Checkpoint", NamedTextColor.LIGHT_PURPLE)));
         }
         tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
@@ -686,7 +699,7 @@ public final class Race {
         if (tag.phase != Phase.RACE) return;
         Racer racer = getRacer(player);
         if (racer == null) return;
-        if (item.getType() == Material.ENDER_PEARL && tag.type == RaceType.PARKOUR) {
+        if (item.getType() == Material.ENDER_PEARL) {
             event.setCancelled(true);
             teleportToLastCheckpoint(player);
             return;
@@ -721,12 +734,20 @@ public final class Race {
         Racer racer = getRacer(player);
         if (racer == null) return;
         Cuboid checkpoint = getLastCheckpoint(racer);
-        Block block = checkpoint.getBottomBlock(getWorld());
-        while (!block.isPassable()) block = block.getRelative(0, 1, 0);
-        Location loc = block.getLocation().add(0.5, 0.0, 0.5);
+        Location loc;
+        if (checkpoint.equals(Cuboid.ZERO)) {
+            loc = racer.startVector.toLocation(getWorld());
+        } else {
+            Block block = checkpoint.getBottomBlock(getWorld());
+            while (!block.isPassable()) block = block.getRelative(0, 1, 0);
+            loc = block.getLocation().add(0.5, 0.0, 0.5);
+        }
         Location ploc = player.getLocation();
         loc.setYaw(ploc.getYaw());
         loc.setPitch(ploc.getPitch());
+        if (player.getVehicle() != null) {
+            player.getVehicle().remove();
+        }
         player.teleport(loc);
         player.sendActionBar(ChatColor.GREEN + "Returned to last checkpoint!");
         player.playSound(loc, Sound.ENTITY_ENDER_PEARL_THROW, SoundCategory.MASTER, 0.5f, 1.0f);
