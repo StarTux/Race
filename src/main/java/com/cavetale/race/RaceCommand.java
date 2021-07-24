@@ -152,11 +152,7 @@ public final class RaceCommand implements TabExecutor {
         player.sendMessage(a + "goodies " + b + race.tag.goodies.size());
         player.sendMessage(a + "laps " + b + race.tag.laps);
         player.sendMessage(a + "event " + b + race.tag.event);
-        int count = 0;
-        for (Racer racer : race.tag.racers) {
-            if (racer.racing && !racer.finished) count += 1;
-        }
-        player.sendMessage(a + "racing " + b + count);
+        player.sendMessage(a + "racing " + b + race.tag.countRacers());
         return true;
     }
 
@@ -167,7 +163,7 @@ public final class RaceCommand implements TabExecutor {
         Player player = context.requirePlayer();
         Cuboid cuboid = requireWorldEditSelection(player);
         if (race == null) {
-            race = new Race(plugin, name, new Race.Tag());
+            race = new Race(plugin, name, new Tag());
             plugin.races.add(race);
         }
         race.setWorld(player.getWorld());
@@ -194,11 +190,11 @@ public final class RaceCommand implements TabExecutor {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        if (race.tag.phase == Race.Phase.EDIT) {
-            race.setPhase(Race.Phase.IDLE);
+        if (race.tag.phase == Phase.EDIT) {
+            race.setPhase(Phase.IDLE);
             context.message("" + ChatColor.YELLOW + race.name + ": Edit mode disabled");
         } else {
-            race.setPhase(Race.Phase.EDIT);
+            race.setPhase(Phase.EDIT);
             context.message("" + ChatColor.YELLOW + race.name + ": Edit mode enabled");
         }
         return true;

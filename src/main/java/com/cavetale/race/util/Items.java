@@ -1,8 +1,11 @@
 package com.cavetale.race.util;
 
+import java.util.Arrays;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Material;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
 import org.bukkit.inventory.meta.PotionMeta;
@@ -46,10 +49,27 @@ public final class Items {
     }
 
     public static ItemStack label(Material material, Component label) {
-        ItemStack item = new ItemStack(material);
+        return label(new ItemStack(material), label);
+    }
+
+    public static ItemStack label(ItemStack item, Component label) {
         item.editMeta(meta -> {
                 meta.displayName(label.decoration(TextDecoration.ITALIC, false));
+                meta.addItemFlags(ItemFlag.values());
             });
         return item;
+    }
+
+    public static ItemStack lightningRod() {
+        ItemStack itemStack = new ItemStack(Material.LIGHTNING_ROD);
+        itemStack.editMeta(meta -> {
+                meta.displayName(Component.text("Strike Lighning", NamedTextColor.GOLD)
+                                 .decoration(TextDecoration.ITALIC, false));
+                meta.lore(Arrays.asList(Component.text("Strike everyone ahead of", NamedTextColor.GRAY)
+                                        .decoration(TextDecoration.ITALIC, false),
+                                        Component.text("you with lightning!", NamedTextColor.GRAY)
+                                        .decoration(TextDecoration.ITALIC, false)));
+            });
+        return itemStack;
     }
 }

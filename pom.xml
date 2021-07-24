@@ -89,6 +89,14 @@
 
     <!-- Sidebar -->
     <dependency>
+      <groupId>com.cavetale.mytems</groupId>
+      <artifactId>mytems</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Sidebar -->
+    <dependency>
       <groupId>com.cavetale.sidebar</groupId>
       <artifactId>sidebar</artifactId>
       <version>0.1-SNAPSHOT</version>

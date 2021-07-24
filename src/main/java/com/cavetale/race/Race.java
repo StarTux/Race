@@ -1,10 +1,9 @@
 package com.cavetale.race;
 
+import com.cavetale.mytems.Mytems;
 import com.cavetale.race.util.Items;
-import com.cavetale.race.util.Rnd;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +12,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -26,10 +24,12 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.entity.Vehicle;
@@ -52,33 +52,6 @@ public final class Race {
     final Tag tag;
     Map<Vec3i, Goody> goodies = new HashMap<>();
     final Random random = new Random();
-
-    public enum Phase {
-        IDLE,
-        EDIT,
-        START,
-        RACE,
-        FINISH;
-    }
-
-    public static final class Tag {
-        String worldName = "";
-        RaceType type = RaceType.WALK;
-        Cuboid area = Cuboid.ZERO;
-        Position spawnLocation = Position.ZERO;
-        List<Vec3i> startVectors = new ArrayList<>();
-        List<Vec3i> goodies = new ArrayList<>();
-        Cuboid spawnArea = Cuboid.ZERO;
-        Phase phase = Phase.IDLE;
-        List<Cuboid> checkpoints = new ArrayList<>();
-        int phaseTicks;
-        List<Racer> racers = new ArrayList<>();
-        long startTime = 0;
-        int finishIndex = 0;
-        int laps = 1;
-        boolean event;
-        int rareItemsAvailable = 0;
-    }
 
     public void onDisable() {
         for (Racer racer : tag.racers) {
@@ -135,6 +108,7 @@ public final class Race {
             tag.startTime = System.currentTimeMillis();
             tag.rareItemsAvailable = tag.laps * 3;
             tag.finishIndex = 0;
+            tag.racers.removeIf(r -> !r.isOnline());
             for (Racer racer : tag.racers) {
                 setupCheckpoint(racer, tag.checkpoints.get(0));
                 Player player = racer.getPlayer();
@@ -214,57 +188,20 @@ public final class Race {
                     firework.detonate();
                     giveGoody(player, racer);
                     loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.8f, 2.0f);
-                    if (racer.rank == 0) {
-                        racer.goodyCooldown = now + 10000L;
-                    } else if (racer.rank < 3) {
-                        racer.goodyCooldown = now + 7500L;
-                    } else {
-                        racer.goodyCooldown = now + 5000L;
-                    }
+                    racer.goodyCooldown = now + 3000L;
                     return;
                 }
             }
         }
     }
 
-    ItemStack getHorseGoody(Player player) {
-        ItemStack item = null;
-        int chance = 1;
-        if (Rnd.nextInt(chance++) == 0) {
-            item = Items.loadedCrossbow(Items.potionItem(Material.TIPPED_ARROW, PotionEffectType.SLOW, 80));
-        }
-        if (Rnd.nextInt(chance++) == 0) {
-            item = Items.loadedCrossbow(Items.potionItem(Material.TIPPED_ARROW, PotionEffectType.LEVITATION, 60));
-        }
-        if (Rnd.nextInt(chance++) == 0) {
-            item = Items.potionItem(Material.SPLASH_POTION, PotionEffectType.SPEED, 200);
-        }
-        if (Rnd.nextInt(chance++) == 0) {
-            item = Items.potionItem(Material.SPLASH_POTION, PotionEffectType.INVISIBILITY, 200);
-        }
-        return item;
-    }
-
-    @Value
-    public static final class GoodyDrop {
-        private final int weight;
-        private final ItemStack item;
-    }
-
     void giveGoody(Player player, Racer racer) {
+        List<GoodyDrop> pool = new ArrayList<>();
         switch (tag.type) {
         case BOAT: {
             if (tag.rareItemsAvailable > 0 && racer.rank > 3 && random.nextDouble() < 0.05) {
                 tag.rareItemsAvailable -= 1;
-                ItemStack itemStack = new ItemStack(Material.LIGHTNING_ROD);
-                itemStack.editMeta(meta -> {
-                        meta.displayName(Component.text("Strike Lighning", NamedTextColor.GOLD)
-                                         .decoration(TextDecoration.ITALIC, false));
-                        meta.lore(Arrays.asList(Component.text("Strike everyone ahead of", NamedTextColor.GRAY)
-                                                .decoration(TextDecoration.ITALIC, false),
-                                                Component.text("you with lightning!", NamedTextColor.GRAY)
-                                                .decoration(TextDecoration.ITALIC, false)));
-                    });
+                ItemStack itemStack = Items.lightningRod();
                 player.getInventory().addItem(itemStack);
                 return;
             }
@@ -284,8 +221,9 @@ public final class Race {
             break;
         }
         case HORSE:
+            putHorseGoodies(pool, player, racer);
+            break;
         case PIG: {
-            List<GoodyDrop> pool = new ArrayList<>();
             if (!player.getInventory().contains(Material.CARROT_ON_A_STICK, 4)) {
                 pool.add(new GoodyDrop(10, new ItemStack(Material.CARROT_ON_A_STICK)));
             }
@@ -339,22 +277,48 @@ public final class Race {
                 speedSplashPotion.setItemMeta(meta);
                 pool.add(new GoodyDrop(6, speedSplashPotion));
             }
-            if (pool.isEmpty()) return;
-            int total = 0;
-            for (GoodyDrop drop : pool) total += drop.weight;
-            int roll = random.nextInt(total);
-            for (GoodyDrop drop : pool) {
-                roll -= drop.weight;
-                if (roll <= 0) {
-                    player.getInventory().addItem(drop.item.clone());
-                    break;
-                }
-            }
             break;
         }
         default:
             break;
         }
+        if (tag.rareItemsAvailable <= 0) pool.removeIf(GoodyDrop::isRare);
+        if (pool.isEmpty()) return;
+        double total = 0;
+        for (GoodyDrop drop : pool) total += drop.weight;
+        double roll = random.nextDouble() * total;
+        GoodyDrop theDrop = null;
+        for (GoodyDrop drop : pool) {
+            roll -= drop.weight;
+            if (roll < 0.0) {
+                theDrop = drop;
+                break;
+            }
+        }
+        if (theDrop == null) theDrop = pool.get(pool.size() - 1);
+        if (theDrop.rare) {
+            tag.rareItemsAvailable -= 1;
+        }
+        player.getInventory().addItem(theDrop.item.clone());
+    }
+
+    void putHorseGoodies(List<GoodyDrop> pool, Player player, Racer racer) {
+        int count = tag.countRacers();
+        int rank = racer.rank;
+        if (rank <= count / 4) {
+            pool.add(new GoodyDrop(0.5, Items.potionItem(Material.LINGERING_POTION, PotionType.SLOWNESS)));
+            pool.add(new GoodyDrop(0.5, Items.potionItem(Material.LINGERING_POTION, PotionType.POISON)));
+            pool.add(new GoodyDrop(0.5, Items.potionItem(Material.LINGERING_POTION, PotionType.INSTANT_DAMAGE)));
+            pool.add(new GoodyDrop(2, Items.label(Material.TNT,
+                                                  Component.text("TNT Trap", NamedTextColor.DARK_RED))));
+            pool.add(new GoodyDrop(2, Items.label(Items.potionItem(Material.POTION, PotionType.INSTANT_HEAL),
+                                                  Component.text("Health Boost", NamedTextColor.AQUA))));
+        } else {
+            pool.add(new GoodyDrop(0.1, Items.lightningRod()));
+        }
+        pool.add(new GoodyDrop(2, Items.label(Items.potionItem(Material.POTION, PotionType.SPEED),
+                                              Component.text("Speed Boost", NamedTextColor.GREEN))));
+        pool.add(new GoodyDrop(1, Mytems.BLUNDERBUSS.createItemStack()));
     }
 
     void progressCheckpoint(Player player, Racer racer) {
@@ -365,7 +329,6 @@ public final class Race {
             racer.checkpointIndex = 0;
             racer.lap += 1;
             if (racer.lap >= tag.laps) {
-                racer.racing = false;
                 racer.finished = true;
                 racer.finishTime = System.currentTimeMillis() - tag.startTime;
                 racer.finishIndex = tag.finishIndex++;
@@ -375,7 +338,7 @@ public final class Race {
                     if (racer.finishIndex < 3) {
                         switch (tag.type) {
                         case HORSE:
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey");
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey Equestrian");
                             break;
                         case ICE_BOAT:
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Drifter");
@@ -631,6 +594,9 @@ public final class Race {
             }
             player.getInventory().setItem(8, Items.label(Material.ENDER_PEARL,
                                                          Component.text("Return to Checkpoint", NamedTextColor.LIGHT_PURPLE)));
+            if (tag.type == RaceType.HORSE) {
+                player.getInventory().setHelmet(Mytems.COWBOY_HAT.createItemStack());
+            }
         }
         tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
@@ -684,6 +650,14 @@ public final class Race {
     }
 
     void stopRace() {
+        for (Racer racer : tag.racers) {
+            Player player = racer.getPlayer();
+            if (player != null) {
+                if (player.getVehicle() != null) {
+                    player.getVehicle().remove();
+                }
+            }
+        }
         tag.racers.clear();
         tag.phase = Phase.IDLE;
         clearGoodies();
@@ -727,6 +701,46 @@ public final class Race {
                 }
             }
             player.sendMessage(Component.text("Struck " + count + " players ahead of you with lightning!", NamedTextColor.GOLD));
+        }
+        if (item.getType() == Material.POTION) {
+            PotionMeta meta = (PotionMeta) item.getItemMeta();
+            PotionData potionData = meta.getBasePotionData();
+            if (potionData != null && potionData.getType() == PotionType.SPEED) {
+                if (player.getVehicle() instanceof LivingEntity) {
+                    event.setCancelled(true);
+                    item.subtract(1);
+                    double strength = (double) racer.rank / (double) tag.countRacers();
+                    LivingEntity target = (LivingEntity) player.getVehicle();
+                    target.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,
+                                                            Math.max(100, (int) (600.0 * strength)),
+                                                            2, true, true, true));
+                    player.sendMessage(Component.text("Your ride got a speed boost!",
+                                                      NamedTextColor.GREEN, TextDecoration.ITALIC));
+                    Location loc = player.getLocation();
+                    Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());
+                    player.playSound(loc, Sound.ENTITY_PLAYER_SPLASH_HIGH_SPEED, 2.0f, 2.0f);
+                    player.spawnParticle(Particle.SPELL_MOB, locAhead, 32, 0.5, 0.5, 0.5, 1.0);
+                    return;
+                }
+            }
+            if (potionData != null && potionData.getType() == PotionType.INSTANT_HEAL) {
+                if (player.getVehicle() instanceof LivingEntity) {
+                    event.setCancelled(true);
+                    item.subtract(1);
+                    player.sendMessage(Component.text("Your ride was healed!",
+                                                      NamedTextColor.AQUA, TextDecoration.ITALIC));
+                    LivingEntity target = (LivingEntity) player.getVehicle();
+                    target.setHealth(target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+                    Location loc = player.getLocation();
+                    Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());
+                    player.playSound(loc, Sound.ENTITY_PLAYER_SPLASH_HIGH_SPEED, 2.0f, 2.0f);
+                    player.spawnParticle(Particle.HEART, locAhead, 8, 0.5, 0.5, 0.5, 0.0);
+                    return;
+                }
+            }
+        }
+        if (Mytems.forItem(item) == Mytems.BLUNDERBUSS) {
+            Bukkit.getScheduler().runTask(plugin, () -> item.subtract(1));
         }
     }
 
@@ -772,9 +786,6 @@ public final class Race {
     }
 
     public void onQuit(Player player) {
-        Racer racer = getRacer(player);
-        if (racer != null) return;
-        tag.racers.remove(racer);
         player.setWalkSpeed(0.2f);
     }
 

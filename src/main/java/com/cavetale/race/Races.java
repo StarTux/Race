@@ -20,7 +20,7 @@ public final class Races {
         for (File file : plugin.getSaveFolder().listFiles()) {
             String fileName = file.getName();
             if (!fileName.endsWith(".json")) continue;
-            Race.Tag tag = Json.load(file, Race.Tag.class);
+            Tag tag = Json.load(file, Tag.class);
             String name = fileName.substring(0, fileName.length() - 5);
             if (tag == null) {
                 plugin.getLogger().warning("Failed to load race: " + file);

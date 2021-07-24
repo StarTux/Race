@@ -4,10 +4,12 @@ import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.AbstractArrow;
@@ -15,6 +17,7 @@ import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -24,6 +27,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.AreaEffectCloudApplyEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -182,6 +186,11 @@ public final class EventListener implements Listener {
     @EventHandler
     public void onPlayerSidebar(PlayerSidebarEvent event) {
         Player player = event.getPlayer();
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            if (player.getSpectatorTarget() instanceof Player) {
+                player = (Player) player.getSpectatorTarget();
+            }
+        }
         Race race = plugin.races.at(player.getLocation());
         if (race == null) return;
         List<String> lines = new ArrayList<>();
@@ -191,7 +200,7 @@ public final class EventListener implements Listener {
         if (theRacer != null) {
             if (!theRacer.finished) {
                 lines.add(ChatColor.GREEN + "Lap " + (theRacer.lap + 1) + "/" + race.tag.laps);
-                lines.add(ChatColor.GREEN + "You are #" + (theRacer.rank + 1));
+                lines.add(ChatColor.GREEN + "You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers());
                 lines.add(ChatColor.GREEN + "Time " + ChatColor.WHITE + race.formatTimeShort(race.getTime()));
             } else {
                 lines.add(ChatColor.GREEN + race.formatTime(theRacer.finishTime));
@@ -218,7 +227,7 @@ public final class EventListener implements Listener {
             }
         }
         if (!lines.isEmpty()) {
-            event.addLines(plugin, Priority.LOW, lines);
+            event.addLines(plugin, Priority.HIGHEST, lines);
         }
     }
 
@@ -367,6 +376,25 @@ public final class EventListener implements Listener {
         if (event.getRightClicked().getType() == EntityType.BOAT) {
             if (race.tag.type == RaceType.BOAT || race.tag.type == RaceType.ICE_BOAT) {
                 event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    void onAreaEffectCloudApply(AreaEffectCloudApplyEvent event) {
+        List<LivingEntity> entities = event.getAffectedEntities();
+        if (event.getEntity().getSource() instanceof Player) {
+            Player shooter = (Player) event.getEntity().getSource();
+            for (Iterator<LivingEntity> iter = entities.iterator(); iter.hasNext();) {
+                LivingEntity it = iter.next();
+                if (it.equals(shooter)) {
+                    iter.remove();
+                    continue;
+                }
+                if (shooter.getVehicle() != null && shooter.getVehicle().equals(it)) {
+                    iter.remove();
+                    continue;
+                }
             }
         }
     }

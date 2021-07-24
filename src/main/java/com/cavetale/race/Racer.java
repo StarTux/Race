@@ -34,6 +34,10 @@ public final class Racer implements Comparable<Racer> {
         return Bukkit.getPlayer(uuid);
     }
 
+    public boolean isOnline() {
+        return getPlayer() != null;
+    }
+
     @Override
     public int compareTo(Racer other) {
         if (finished && other.finished) {
