@@ -314,7 +314,7 @@ public final class Race {
             pool.add(new GoodyDrop(2, Items.label(Items.potionItem(Material.POTION, PotionType.INSTANT_HEAL),
                                                   Component.text("Health Boost", NamedTextColor.AQUA))));
         } else {
-            pool.add(new GoodyDrop(0.1, Items.lightningRod()));
+            pool.add(new GoodyDrop(0.05, Items.lightningRod(), true));
         }
         pool.add(new GoodyDrop(2, Items.label(Items.potionItem(Material.POTION, PotionType.SPEED),
                                               Component.text("Speed Boost", NamedTextColor.GREEN))));
@@ -694,7 +694,13 @@ public final class Race {
                 if (otherPlayer != null) {
                     otherPlayer.getWorld().strikeLightningEffect(otherPlayer.getLocation());
                     Entity vehicle = otherPlayer.getVehicle();
-                    if (vehicle != null) vehicle.remove();
+                    if (vehicle != null) {
+                        if (vehicle instanceof LivingEntity) {
+                            ((LivingEntity) vehicle).damage(15.0);
+                        } else {
+                            vehicle.remove();
+                        }
+                    }
                     otherRacer.remountCooldown = 60;
                     otherPlayer.sendMessage(Component.text("Struck by lightning!", NamedTextColor.GOLD));
                     count += 1;
