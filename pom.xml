@@ -111,5 +111,13 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- WorldMarker -->
+    <dependency>
+      <groupId>com.cavetale.worldmarker</groupId>
+      <artifactId>worldmarker</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
   </dependencies>
 </project>

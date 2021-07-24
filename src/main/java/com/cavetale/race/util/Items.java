@@ -1,5 +1,8 @@
 package com.cavetale.race.util;
 
+import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.item.captain.Blunderbuss;
+import com.cavetale.worldmarker.util.Tags;
 import java.util.Arrays;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -71,5 +74,13 @@ public final class Items {
                                         .decoration(TextDecoration.ITALIC, false)));
             });
         return itemStack;
+    }
+
+    public static ItemStack blunderbuss() {
+        ItemStack item = Mytems.BLUNDERBUSS.createItemStack();
+        item.editMeta(meta -> {
+                Tags.set(meta.getPersistentDataContainer(), Blunderbuss.getSingleUseKey(), 1);
+            });
+        return item;
     }
 }

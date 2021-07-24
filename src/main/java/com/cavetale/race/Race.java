@@ -318,7 +318,7 @@ public final class Race {
         }
         pool.add(new GoodyDrop(2, Items.label(Items.potionItem(Material.POTION, PotionType.SPEED),
                                               Component.text("Speed Boost", NamedTextColor.GREEN))));
-        pool.add(new GoodyDrop(1, Mytems.BLUNDERBUSS.createItemStack()));
+        pool.add(new GoodyDrop(1, Items.blunderbuss()));
     }
 
     void progressCheckpoint(Player player, Racer racer) {
@@ -738,9 +738,6 @@ public final class Race {
                     return;
                 }
             }
-        }
-        if (Mytems.forItem(item) == Mytems.BLUNDERBUSS) {
-            Bukkit.getScheduler().runTask(plugin, () -> item.subtract(1));
         }
     }
 
