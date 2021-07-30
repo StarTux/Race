@@ -819,7 +819,7 @@ public final class Race {
                 goody.cooldown -= 1;
                 continue;
             }
-            if (goody.entity == null || !goody.entity.isValid()) {
+            if (goody.entity == null || goody.entity.isDead()) {
                 goody.entity = null;
                 Location location = goody.where.toLocation(getWorld());
                 if (!location.isChunkLoaded()) continue;
