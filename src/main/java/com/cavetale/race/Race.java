@@ -336,27 +336,30 @@ public final class Race {
                 if (tag.event) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                     if (racer.finishIndex < 3) {
-                        switch (tag.type) {
-                        case HORSE:
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey Equestrian JollyJumper Secretariat");
-                            break;
-                        case ICE_BOAT:
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Drifter");
-                            break;
-                        case BOAT:
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Sailor");
-                            break;
-                        case PIG:
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " PigRacer BaconRacer");
-                            break;
-                        default:
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Falcon");
-                            break;
-                        }
+                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                                switch (tag.type) {
+                                case HORSE:
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey Equestrian JollyJumper Secretariat");
+                                    break;
+                                case ICE_BOAT:
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Drifter");
+                                    break;
+                                case BOAT:
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Sailor");
+                                    break;
+                                case PIG:
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " PigRacer BaconRacer");
+                                    break;
+                                default:
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Falcon");
+                                    break;
+                                }
+                            }, 40L);
                     }
                 }
                 player.sendTitle("" + ChatColor.GREEN + "#" + (racer.finishIndex + 1),
-                                 "" + ChatColor.GREEN + formatTime(racer.finishTime));
+                                 "" + ChatColor.GREEN + formatTime(racer.finishTime),
+                                 0, 20, 10);
                 for (Player target : getPresentPlayers()) {
                     target.sendMessage(ChatColor.GREEN + player.getName()
                                        + " finished #" + (racer.finishIndex + 1)
