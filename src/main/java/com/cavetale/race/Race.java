@@ -737,6 +737,7 @@ public final class Race {
                                                       NamedTextColor.AQUA, TextDecoration.ITALIC));
                     LivingEntity target = (LivingEntity) player.getVehicle();
                     target.setHealth(target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+                    target.removePotionEffect(PotionEffectType.POISON);
                     Location loc = player.getLocation();
                     Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());
                     player.playSound(loc, Sound.ENTITY_PLAYER_SPLASH_HIGH_SPEED, 2.0f, 2.0f);
