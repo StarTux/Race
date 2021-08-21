@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -193,41 +196,56 @@ public final class EventListener implements Listener {
         }
         Race race = plugin.races.at(player.getLocation());
         if (race == null) return;
-        List<String> lines = new ArrayList<>();
+        List<Component> lines = new ArrayList<>();
         int i = 0;
         List<Racer> racers = race.getRacers();
         Racer theRacer = race.getRacer(player);
         if (theRacer != null) {
             if (!theRacer.finished) {
-                lines.add(ChatColor.GREEN + "Lap " + (theRacer.lap + 1) + "/" + race.tag.laps);
-                lines.add(ChatColor.GREEN + "You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers());
-                lines.add(ChatColor.GREEN + "Time " + ChatColor.WHITE + race.formatTimeShort(race.getTime()));
+                lines.add(Component.text("Lap " + (theRacer.lap + 1) + "/" + race.tag.laps, NamedTextColor.GREEN));
+                lines.add(Component.text("You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers(), NamedTextColor.GREEN));
+                lines.add(Component.text("Time " + ChatColor.WHITE + race.formatTimeShort(race.getTime()), NamedTextColor.GREEN));
             } else {
-                lines.add(ChatColor.GREEN + race.formatTime(theRacer.finishTime));
+                lines.add(Component.text(race.formatTime(theRacer.finishTime), NamedTextColor.GREEN));
             }
             if (race.tag.type == RaceType.PIG) {
                 if (player.getVehicle() instanceof Pig) {
                     Pig pig = (Pig) player.getVehicle();
                     double speed = pig.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
-                    lines.add(ChatColor.GREEN + "Speed " + ChatColor.WHITE + (int) Math.round(speed * 100.0));
+                    lines.add(Component.text("Speed " + ChatColor.WHITE + (int) Math.round(speed * 100.0), NamedTextColor.GREEN));
                 }
             }
         }
         for (Racer racer : racers) {
+            Player racerPlayer = racer.getPlayer();
+            Component name = racerPlayer != null ? racerPlayer.displayName() : Component.text(racer.name);
             int index = i++;
             if (index > 8) break;
             if (racer.finished) {
                 if (racer.rank < 3) {
-                    lines.add("" + ChatColor.GOLD + ChatColor.BOLD + "#" + (index + 1) + " " + racer.name);
+                    lines.add(Component.text()
+                              .append(Component.text("#" + (index + 1) + " "))
+                              .append(name)
+                              .color(NamedTextColor.GOLD)
+                              .decorate(TextDecoration.BOLD)
+                              .build());
                 } else {
-                    lines.add("" + ChatColor.GOLD + "#" + (index + 1) + " " + racer.name);
+                    lines.add(Component.text()
+                              .append(Component.text("#" + (index + 1) + " "))
+                              .append(name)
+                              .color(NamedTextColor.GOLD)
+                              .build());
                 }
             } else {
-                lines.add("" + ChatColor.GREEN + "#" + (index + 1) + ChatColor.WHITE + " " + racer.name);
+                lines.add(Component.text()
+                          .append(Component.text("#" + (index + 1) + " "))
+                          .append(name)
+                          .color(NamedTextColor.WHITE)
+                          .build());
             }
         }
         if (!lines.isEmpty()) {
-            event.addLines(plugin, Priority.HIGHEST, lines);
+            event.add(plugin, Priority.HIGHEST, lines);
         }
     }
 
