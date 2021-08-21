@@ -338,7 +338,7 @@ public final class Race {
                     if (racer.finishIndex < 3) {
                         switch (tag.type) {
                         case HORSE:
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey Equestrian JollyJumper");
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Jockey Equestrian JollyJumper Secretariat");
                             break;
                         case ICE_BOAT:
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " Drifter");
