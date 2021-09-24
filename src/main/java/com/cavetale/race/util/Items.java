@@ -36,8 +36,8 @@ public final class Items {
         PotionMeta meta = (PotionMeta) itemStack.getItemMeta();
         PotionEffect effect = new PotionEffect(type, duration, 0, true, false, true);
         meta.addCustomEffect(effect, true);
-        meta.setColor(effect.getColor());
-        meta.setDisplayName(type.getName());
+        meta.setColor(type.getColor());
+        meta.displayName(Component.text(type.getName()));
         itemStack.setItemMeta(meta);
         return itemStack;
     }
@@ -46,7 +46,7 @@ public final class Items {
         ItemStack itemStack = new ItemStack(Material.CROSSBOW);
         CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
         meta.addChargedProjectile(loaded);
-        meta.setDisplayName(loaded.getItemMeta().getDisplayName());
+        meta.displayName(loaded.getItemMeta().displayName());
         itemStack.setItemMeta(meta);
         return itemStack;
     }

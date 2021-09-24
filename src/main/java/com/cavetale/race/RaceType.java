@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import com.cavetale.race.util.Rnd;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -35,7 +36,7 @@ public enum RaceType {
         }
     }
 
-    Vehicle spawnVehicle(Location location) {
+    protected Vehicle spawnVehicle(Location location) {
         switch (this) {
         case STRIDER:
             return location.getWorld().spawn(location, Strider.class, e -> {
@@ -82,6 +83,21 @@ public enum RaceType {
         }
         default:
             return null;
+        }
+    }
+
+    public List<String> getWinnerTitles() {
+        switch (this) {
+        case HORSE:
+            return List.of("Jockey", "Equestrian", "JollyJumper", "Secretariat");
+        case ICE_BOAT:
+            return List.of("Drifter");
+        case BOAT:
+            return List.of("Sailor");
+        case PIG:
+            return List.of("PigRacer BaconRacer");
+        default:
+            return List.of("Falcon");
         }
     }
 }

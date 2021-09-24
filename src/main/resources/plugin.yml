@@ -1,11 +1,11 @@
 main: com.cavetale.race.RacePlugin
 name: Race
-version: 0.1
 
 author: StarTux
 description: Racing Minigame
 website: https://cavetale.com
 
+version: 0.1
 api-version: 1.17
 
 depend: [Mytems, Sidebar]

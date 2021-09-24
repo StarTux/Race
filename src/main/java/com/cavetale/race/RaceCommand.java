@@ -8,15 +8,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import net.md_5.bungee.api.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 @RequiredArgsConstructor
 public final class RaceCommand implements TabExecutor {
@@ -30,9 +25,6 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("info")
             .playerCaller(this::info)
             .description("Info about current race course");
-        root.addChild("test")
-            .playerCaller(this::test)
-            .description("Test");
         root.addChild("create")
             .caller(this::create)
             .description("Create a new race");
@@ -446,17 +438,6 @@ public final class RaceCommand implements TabExecutor {
         race.tag.area = cuboid;
         race.save();
         player.sendMessage(ChatColor.GREEN + "Event area reset: " + race.tag.area);
-        return true;
-    }
-
-    boolean test(Player player, String[] args) {
-        ItemStack speedSplashPotion = new ItemStack(Material.SPLASH_POTION);
-        PotionMeta meta = (PotionMeta) speedSplashPotion.getItemMeta();
-        //meta.setBasePotionData(new PotionData(PotionType.SPEED, false, false));
-        meta.addCustomEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 5, 2, true, true, true), true);
-        meta.setDisplayName("Speed III");
-        speedSplashPotion.setItemMeta(meta);
-        player.getInventory().addItem(speedSplashPotion);
         return true;
     }
 

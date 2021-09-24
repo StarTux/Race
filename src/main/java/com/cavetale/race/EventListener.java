@@ -36,7 +36,9 @@ import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -46,7 +48,6 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
@@ -258,20 +259,12 @@ public final class EventListener implements Listener {
     @EventHandler
     public void onEntityDismount(EntityDismountEvent event) {
         Race race = plugin.races.at(event.getEntity().getLocation());
-        if (race == null) return;
+        if (race == null || !race.isMounted() || !race.isRacing()) return;
         if (!(event.getEntity() instanceof Player)) return;
-        event.getDismounted().remove();
         Player player = (Player) event.getEntity();
         Racer racer = race.getRacer(player);
-        if (racer == null) return;
-        player.sendMessage(ChatColor.RED + "Dismounted");
-        switch (race.tag.type) {
-        case PIG:
-            racer.remountCooldown = 10;
-            break;
-        default:
-            racer.remountCooldown = 40;
-        }
+        if (racer == null || !racer.racing || racer.finished) return;
+        event.setCancelled(true);
     }
 
     @EventHandler
@@ -338,6 +331,19 @@ public final class EventListener implements Listener {
         race.onMoveFromTo(player, event.getFrom(), event.getTo());
     }
 
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        Race race = plugin.races.at(event.getEntity().getLocation());
+        if (race == null || !race.isMounted() || !race.isRacing()) return;
+        List<Entity> passengerList = event.getEntity().getPassengers();
+        if (passengerList == null || passengerList.isEmpty()) return;
+        if (!(passengerList.get(0) instanceof Player)) return;
+        Player player = (Player) passengerList.get(0);
+        Racer racer = race.getRacer(player);
+        if (racer == null || !racer.racing || racer.finished) return;
+        racer.remountCooldown = 100;
+    }
+
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     void onProjectileLaunch(ProjectileLaunchEvent event) {
         Projectile projectile = event.getEntity();
@@ -373,8 +379,8 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler
-    void onPlayerPickupItem(PlayerPickupItemEvent event) {
-        Race race = plugin.races.at(event.getPlayer().getLocation());
+    void onEntityPickupItem(EntityPickupItemEvent event) {
+        Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null) return;
         event.setCancelled(true);
     }
