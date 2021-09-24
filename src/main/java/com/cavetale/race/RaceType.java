@@ -21,7 +21,8 @@ public enum RaceType {
     ICE_BOAT,
     BOAT,
     HORSE,
-    PIG;
+    PIG,
+    ELYTRA;
 
     public boolean isMounted() {
         switch (this) {

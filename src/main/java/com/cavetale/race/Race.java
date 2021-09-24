@@ -318,6 +318,9 @@ public final class Race {
                                                             Duration.ofMillis(0))));
             }
         }
+        if (tag.type == RaceType.ELYTRA && player.isGliding()) {
+            player.boostElytra(new ItemStack(Material.FIREWORK_ROCKET));
+        }
     }
 
     void tickRace(int ticks) {
@@ -385,6 +388,18 @@ public final class Race {
                         player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
                     }
                     player.getInventory().remove(Material.FISHING_ROD);
+                }
+            }
+        }
+        if (tag.type == RaceType.ELYTRA) {
+            for (Racer racer : tag.racers) {
+                Player player = racer.getPlayer();
+                if (player == null || racer.finished || !racer.racing) continue;
+                ItemStack elytra = player.getInventory().getChestplate();
+                if (elytra == null || elytra.getType() != Material.ELYTRA) {
+                    player.getInventory().setChestplate(new ItemStack(Material.ELYTRA));
+                } else if (player.isGliding()) {
+                    getWorld().spawnParticle(Particle.WAX_OFF, player.getLocation(), 1, 0.0, 0.0, 0.0, 0.0);
                 }
             }
         }

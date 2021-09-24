@@ -40,6 +40,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
+import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
@@ -225,21 +226,20 @@ public final class EventListener implements Listener {
             if (racer.finished) {
                 if (racer.rank < 3) {
                     lines.add(Component.text()
-                              .append(Component.text("#" + (index + 1) + " "))
+                              .append(Component.text("" + (index + 1) + " "))
                               .append(name)
                               .color(NamedTextColor.GOLD)
-                              .decorate(TextDecoration.BOLD)
                               .build());
                 } else {
                     lines.add(Component.text()
-                              .append(Component.text("#" + (index + 1) + " "))
+                              .append(Component.text("" + (index + 1) + " "))
                               .append(name)
                               .color(NamedTextColor.GOLD)
                               .build());
                 }
             } else {
                 lines.add(Component.text()
-                          .append(Component.text("#" + (index + 1) + " "))
+                          .append(Component.text("" + (index + 1) + " "))
                           .append(name)
                           .color(NamedTextColor.WHITE)
                           .build());
@@ -420,6 +420,23 @@ public final class EventListener implements Listener {
                     continue;
                 }
             }
+        }
+    }
+
+    @EventHandler
+    void onPlayerToggleGlide(EntityToggleGlideEvent event) {
+        Race race = plugin.races.at(event.getEntity().getLocation());
+        if (race == null || race.tag.type != RaceType.ELYTRA) return;
+        if (!(event.getEntity() instanceof Player)) return;
+        Player player = (Player) event.getEntity();
+        Racer racer = race.getRacer(player);
+        if (racer == null || !racer.racing || racer.finished) return;
+        if (event.isGliding()) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (player.isGliding()) {
+                        player.boostElytra(new ItemStack(Material.FIREWORK_ROCKET));
+                    }
+                });
         }
     }
 }
