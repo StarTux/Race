@@ -1,11 +1,15 @@
 package com.cavetale.race;
 
+import com.cavetale.core.font.Unicode;
+import com.cavetale.core.font.VanillaItems;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
+import com.winthier.playercache.PlayerCache;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -55,6 +59,7 @@ import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
 import org.spigotmc.event.entity.EntityDismountEvent;
+import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 
 @RequiredArgsConstructor
 public final class EventListener implements Listener {
@@ -197,7 +202,12 @@ public final class EventListener implements Listener {
             }
         }
         Race race = plugin.races.at(player.getLocation());
-        if (race == null) return;
+        if (race == null || !race.isRacing()) {
+            if (plugin.save.event) {
+                eventSidebar(player, event);
+            }
+            return;
+        }
         List<Component> lines = new ArrayList<>();
         int i = 0;
         List<Racer> racers = race.getRacers();
@@ -205,8 +215,6 @@ public final class EventListener implements Listener {
         if (theRacer != null) {
             if (!theRacer.finished) {
                 lines.add(Component.text("Lap " + (theRacer.lap + 1) + "/" + race.tag.laps, NamedTextColor.GREEN));
-                lines.add(Component.text("You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers(), NamedTextColor.GREEN));
-                lines.add(Component.text("Time " + ChatColor.WHITE + race.formatTimeShort(race.getTime()), NamedTextColor.GREEN));
             } else {
                 lines.add(Component.text(race.formatTime(theRacer.finishTime), NamedTextColor.GREEN));
             }
@@ -218,6 +226,15 @@ public final class EventListener implements Listener {
                 }
             }
         }
+        String time = race.formatTimeShort(race.getTime());
+        String maxTime = race.tag.maxDuration > 0
+            ? race.formatTimeShort(race.tag.maxDuration * 1000L)
+            : "" + Unicode.INFINITY.character;
+        lines.add(Component.text().content("Time ").color(NamedTextColor.GREEN)
+                  .append(Component.text(time, NamedTextColor.YELLOW))
+                  .append(Component.text("/", NamedTextColor.WHITE))
+                  .append(Component.text(maxTime, NamedTextColor.RED))
+                  .build());
         for (Racer racer : racers) {
             Player racerPlayer = racer.getPlayer();
             Component name = racerPlayer != null ? racerPlayer.displayName() : Component.text(racer.name);
@@ -245,9 +262,39 @@ public final class EventListener implements Listener {
                           .build());
             }
         }
+        lines.add(Component.text("You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers(), NamedTextColor.GREEN));
         if (!lines.isEmpty()) {
             event.add(plugin, Priority.HIGHEST, lines);
         }
+    }
+
+    private void eventSidebar(Player player, PlayerSidebarEvent event) {
+        if (plugin.save.scores.isEmpty()) return;
+        List<UUID> uuids = plugin.save.rankScores();
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.text()
+                  .append(VanillaItems.GOLDEN_HORSE_ARMOR.component)
+                  .append(Component.text("Cavetale Grand Prix", NamedTextColor.GOLD))
+                  .append(VanillaItems.ACACIA_BOAT.component)
+                  .build());
+        for (int i = 0; i < 10 && i < uuids.size(); i += 1) {
+            UUID uuid = uuids.get(i);
+            int score = plugin.save.scores.get(uuid);
+            Player thePlayer = Bukkit.getPlayer(uuid);
+            Component name = thePlayer != null
+                ? thePlayer.displayName()
+                : Component.text(PlayerCache.nameForUuid(uuid));
+            lines.add(Component.text()
+                      .append(Component.text("" + (i + 1) + " ", (i < 3 ? NamedTextColor.GOLD : NamedTextColor.BLUE)))
+                      .append(name)
+                      .append(Component.text(" " + score, NamedTextColor.BLUE, TextDecoration.ITALIC))
+                      .build());
+        }
+        Integer playerScoreObj = plugin.save.scores.get(player.getUniqueId());
+        int playerScore = playerScoreObj != null ? playerScoreObj : 0;
+        lines.add(Component.text("Your Score ", NamedTextColor.WHITE)
+                  .append(Component.text(playerScore, NamedTextColor.BLUE)));
+        event.add(plugin, Priority.HIGHEST, lines);
     }
 
     @EventHandler
@@ -437,6 +484,17 @@ public final class EventListener implements Listener {
                         player.boostElytra(new ItemStack(Material.FIREWORK_ROCKET));
                     }
                 });
+        }
+    }
+
+    @EventHandler
+    void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
+        if (!plugin.save.event) return;
+        for (Race race : plugin.races.all()) {
+            if (race.isRacing() && race.getWorld() != null) {
+                event.setSpawnLocation(race.getSpawnLocation());
+                break;
+            }
         }
     }
 }

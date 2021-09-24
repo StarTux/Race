@@ -276,6 +276,16 @@ public final class Race {
         pool.add(new GoodyDrop(1, Items.blunderbuss()));
     }
 
+    private int getEventScore(int finishIndex) {
+        switch (finishIndex) {
+        case 0: return 9;
+        case 1: return 7;
+        case 2: return 5;
+        case 3: return 3;
+        default: return 1;
+        }
+    }
+
     void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
@@ -289,15 +299,15 @@ public final class Race {
                 racer.finishIndex = tag.finishIndex++;
                 if (player.getVehicle() != null) player.getVehicle().remove();
                 plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + (racer.finishIndex + 1));
-                if (tag.event) {
+                if (plugin.save.event) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
-                    if (racer.finishIndex < 3) {
-                        final List<String> titles = tag.type.getWinnerTitles();
-                        String cmd = "titles unlockset " + player.getName() + " " + String.join(" ", titles);
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-                            }, 40L);
-                    }
+                    int score = getEventScore(racer.finishIndex);
+                    int totalScore = plugin.save.scores.compute(player.getUniqueId(), (u, i) -> (i != null ? i : 0) + score);
+                    player.sendMessage(Component.text().color(NamedTextColor.GOLD)
+                                       .append(Component.text("You earned "))
+                                       .append(Component.text(score, NamedTextColor.BLUE))
+                                       .append(Component.text(" points for a total of "))
+                                       .append(Component.text(totalScore, NamedTextColor.BLUE)));
                 }
                 player.showTitle(Title.title(Component.text("#" + (racer.finishIndex + 1), NamedTextColor.GREEN),
                                              Component.text(formatTime(racer.finishTime), NamedTextColor.GREEN),
@@ -324,6 +334,19 @@ public final class Race {
     }
 
     void tickRace(int ticks) {
+        if (tag.maxDuration > 0) {
+            if (getTime() > tag.maxDuration * 1000L) {
+                for (Player player : getPresentPlayers()) {
+                    player.showTitle(Title.title(Component.text("Timeout", NamedTextColor.RED),
+                                                 Component.text("The race is over", NamedTextColor.RED),
+                                                 Title.Times.of(Duration.ZERO,
+                                                                Duration.ofSeconds(2),
+                                                                Duration.ofSeconds(1))));
+                    player.sendMessage(Component.text("Timeout! The race is over", NamedTextColor.RED));
+                }
+                stopRace();
+            }
+        }
         for (Player player : getWorld().getPlayers()) {
             if (getRacer(player) != null) continue;
             if (!tag.area.contains(player.getLocation())) continue;
@@ -603,11 +626,7 @@ public final class Race {
     public static String formatTimeShort(long millis) {
         int secs = ((int) (millis / 1000)) % 60;
         int mins = (int) (millis / 1000 / 60);
-        if (mins > 0) {
-            return String.format("%d:%02d", mins, secs);
-        } else {
-            return String.format("%d", secs);
-        }
+        return String.format("%d:%02d", mins, secs);
     }
 
     public Racer getRacer(Player player) {

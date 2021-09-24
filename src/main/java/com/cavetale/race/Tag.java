@@ -2,7 +2,10 @@ package com.cavetale.race;
 
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter @Setter
 public final class Tag {
     protected String worldName = "";
     protected RaceType type = RaceType.WALK;
@@ -18,8 +21,8 @@ public final class Tag {
     protected long startTime = 0;
     protected int finishIndex = 0;
     protected int laps = 1;
-    protected boolean event;
     protected int rareItemsAvailable = 0;
+    protected long maxDuration = 0; // seconds
 
     public int countRacers() {
         int count = 0;

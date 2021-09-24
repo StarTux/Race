@@ -86,7 +86,7 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- Sidebar -->
+    <!-- Mytems -->
     <dependency>
       <groupId>com.cavetale.mytems</groupId>
       <artifactId>mytems</artifactId>
@@ -106,6 +106,14 @@
     <dependency>
       <groupId>com.cavetale.core</groupId>
       <artifactId>core</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- PlayerCache -->
+    <dependency>
+      <groupId>com.winthier.playercache</groupId>
+      <artifactId>playercache</artifactId>
       <version>0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>

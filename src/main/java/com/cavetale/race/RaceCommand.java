@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -81,6 +83,17 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("mount").denyTabCompletion()
             .description("Summon a mount for yourself")
             .playerCaller(this::mount);
+        root.addChild("maxduration").arguments("<seconds>")
+            .playerCaller(this::maxDuration);
+        // score
+        CommandNode scoreNode = root.addChild("score")
+            .description("Grand Prix Scores");
+        scoreNode.addChild("reset").denyTabCompletion()
+            .description("Reset all scores")
+            .senderCaller(this::scoreReset);
+        scoreNode.addChild("pedestal").denyTabCompletion()
+            .description("Put winners on pedestals")
+            .senderCaller(this::scorePedestal);
         plugin.getCommand("race").setExecutor(this);
     }
 
@@ -143,7 +156,6 @@ public final class RaceCommand implements TabExecutor {
         player.sendMessage(a + "checkpoints " + b + race.tag.checkpoints.size());
         player.sendMessage(a + "goodies " + b + race.tag.goodies.size());
         player.sendMessage(a + "laps " + b + race.tag.laps);
-        player.sendMessage(a + "event " + b + race.tag.event);
         player.sendMessage(a + "racing " + b + race.tag.countRacers());
         return true;
     }
@@ -421,14 +433,20 @@ public final class RaceCommand implements TabExecutor {
     }
 
     boolean event(Player player, String[] args) {
-        Race race = requireRace(player);
-        race.tag.event = !race.tag.event;
-        race.save();
-        if (race.tag.event) {
-            player.sendMessage(ChatColor.GREEN + "Event mode enabled");
-        } else {
-            player.sendMessage(ChatColor.RED + "Event mode disabled");
+        if (args.length > 1) return false;
+        if (args.length == 1) {
+            try {
+                plugin.save.event = Boolean.parseBoolean(args[0]);
+            } catch (IllegalArgumentException iae) {
+                player.sendMessage(Component.text("Invalid boolean: " + args[0], NamedTextColor.RED));
+                return true;
+            }
+            plugin.save();
         }
+        player.sendMessage(Component.text("Event mode is ")
+                           .append(plugin.save.event
+                                   ? Component.text("Enabled", NamedTextColor.GREEN)
+                                   : Component.text("Disabled", NamedTextColor.GREEN)));
         return true;
     }
 
@@ -448,6 +466,28 @@ public final class RaceCommand implements TabExecutor {
         }
         race.tag.type.spawnVehicle(player.getLocation());
         player.sendMessage(ChatColor.YELLOW + "Vehicle spawned");
+        return true;
+    }
+
+    boolean maxDuration(Player player, String[] args) {
+        Race race = requireRace(player);
+        race.tag.setMaxDuration(requireInt(args[0]));
+        race.save();
+        player.sendMessage(Component.text("Max duration set to " + race.tag.getMaxDuration() + " seconds",
+                                          NamedTextColor.YELLOW));
+        return true;
+    }
+
+    boolean scoreReset(CommandSender sender, String[] args) {
+        plugin.save.scores.clear();
+        plugin.save();
+        sender.sendMessage(Component.text("All scores were reset!", NamedTextColor.YELLOW));
+        return true;
+    }
+
+    boolean scorePedestal(CommandSender sender, String[] args) {
+        sender.sendMessage(Component.text("Putting winners on pedestals...", NamedTextColor.YELLOW));
+        plugin.scoreRanking();
         return true;
     }
 }
