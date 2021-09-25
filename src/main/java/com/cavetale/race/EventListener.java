@@ -313,7 +313,14 @@ public final class EventListener implements Listener {
         Player player = (Player) event.getEntity();
         Racer racer = race.getRacer(player);
         if (racer == null || !racer.racing || racer.finished) return;
-        event.setCancelled(true);
+        if (race.tag.type != RaceType.BOAT) {
+            event.setCancelled(true);
+        } else {
+            racer.remountCooldown = 100;
+            if (event.getDismounted().getType() == EntityType.BOAT) {
+                event.getDismounted().remove();
+            }
+        }
     }
 
     @EventHandler
