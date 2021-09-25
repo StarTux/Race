@@ -454,6 +454,12 @@ public final class RaceCommand implements TabExecutor {
     }
 
     boolean eventRace(Player player, String[] args) {
+        if (args.length == 1 && args[0].equals("reset")) {
+            plugin.save.eventRace = null;
+            plugin.save();
+            player.sendMessage(Component.text("Event race reset", NamedTextColor.YELLOW));
+            return true;
+        }
         if (args.length != 0) return false;
         Race race = requireRace(player);
         plugin.save.eventRace = race.name;
