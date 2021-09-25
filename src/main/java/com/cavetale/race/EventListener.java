@@ -262,7 +262,9 @@ public final class EventListener implements Listener {
                           .build());
             }
         }
-        lines.add(Component.text("You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers(), NamedTextColor.GREEN));
+        if (theRacer != null) {
+            lines.add(Component.text("You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers(), NamedTextColor.GREEN));
+        }
         if (!lines.isEmpty()) {
             event.add(plugin, Priority.HIGHEST, lines);
         }
