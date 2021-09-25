@@ -1,11 +1,13 @@
 package com.cavetale.race;
 
 import java.util.Random;
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Firework;
 import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.Bukkit;
 
 final class Fireworks {
     static Random random = new Random();
@@ -43,5 +45,12 @@ final class Fireworks {
 
     public static FireworkMeta simpleFireworkMeta() {
         return randomFireworkMeta(FireworkEffect.Type.BURST, 1);
+    }
+
+    public static Firework spawnFirework(Location location) {
+        return location.getWorld().spawn(location, Firework.class, e -> {
+                e.setPersistent(false);
+                e.setFireworkMeta(randomFireworkMeta(FireworkEffect.Type.STAR, 3));
+            });
     }
 }

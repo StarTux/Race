@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -80,6 +81,8 @@ public final class RacePlugin extends JavaPlugin {
             Location location = area.min.toLocation(world);
             location.setDirection(spawnLocation.toVector().subtract(location.toVector()).normalize());
             player.teleport(location);
+            player.setGameMode(GameMode.ADVENTURE);
+            Fireworks.spawnFirework(location.add(0, 2, 0));
         }
         for (Area area : areasFile.getAreas().getViewer()) {
             List<Vec3i> viewerVecs = area.enumerate();
@@ -93,6 +96,7 @@ public final class RacePlugin extends JavaPlugin {
                 Location location = viewerVec.toLocation(world);
                 location.setDirection(spawnLocation.toVector().subtract(location.toVector()).normalize());
                 player.teleport(location);
+                player.setGameMode(GameMode.ADVENTURE);
             }
             break;
         }
