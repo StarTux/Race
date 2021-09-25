@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public final class Save {
     protected boolean event;
+    protected String eventRace;
     protected Map<UUID, Integer> scores = new HashMap<>();
 
     public List<UUID> rankScores() {

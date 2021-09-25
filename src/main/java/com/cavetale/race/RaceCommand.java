@@ -77,6 +77,9 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("event").denyTabCompletion()
             .description("Toggle event mode")
             .playerCaller(this::event);
+        root.addChild("eventrace").denyTabCompletion()
+            .description("Make current race the event race")
+            .playerCaller(this::eventRace);
         root.addChild("setarea").denyTabCompletion()
             .description("Set race area")
             .playerCaller(this::setArea);
@@ -447,6 +450,16 @@ public final class RaceCommand implements TabExecutor {
                            .append(plugin.save.event
                                    ? Component.text("Enabled", NamedTextColor.GREEN)
                                    : Component.text("Disabled", NamedTextColor.GREEN)));
+        return true;
+    }
+
+    boolean eventRace(Player player, String[] args) {
+        if (args.length != 0) return false;
+        Race race = requireRace(player);
+        plugin.save.eventRace = race.name;
+        plugin.save();
+        player.sendMessage(Component.text("Event race set to " + plugin.save.eventRace,
+                                          NamedTextColor.YELLOW));
         return true;
     }
 

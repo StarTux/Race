@@ -487,14 +487,12 @@ public final class EventListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
-        if (!plugin.save.event) return;
-        for (Race race : plugin.races.all()) {
-            if (race.isRacing() && race.getWorld() != null) {
-                event.setSpawnLocation(race.getSpawnLocation());
-                break;
-            }
+        if (!plugin.save.event || plugin.save.eventRace == null) return;
+        Race race = plugin.races.named(plugin.save.eventRace);
+        if (race != null && race.getWorld() != null) {
+            event.setSpawnLocation(race.getSpawnLocation());
         }
     }
 }
