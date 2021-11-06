@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -466,6 +467,10 @@ public final class RaceCommand implements TabExecutor {
         plugin.save();
         player.sendMessage(Component.text("Event race set to " + plugin.save.eventRace,
                                           NamedTextColor.YELLOW));
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (player == online) continue;
+            player.teleport(race.getSpawnLocation());
+        }
         return true;
     }
 
@@ -505,6 +510,8 @@ public final class RaceCommand implements TabExecutor {
     }
 
     boolean scorePedestal(CommandSender sender, String[] args) {
+        plugin.save.eventRace = null;
+        plugin.save();
         sender.sendMessage(Component.text("Putting winners on pedestals...", NamedTextColor.YELLOW));
         plugin.scoreRanking();
         return true;

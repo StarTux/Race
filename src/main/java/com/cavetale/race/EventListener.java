@@ -1,7 +1,8 @@
 package com.cavetale.race;
 
 import com.cavetale.core.font.Unicode;
-import com.cavetale.core.font.VanillaItems;
+import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
@@ -12,8 +13,8 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -271,26 +272,32 @@ public final class EventListener implements Listener {
     }
 
     private void eventSidebar(Player player, PlayerSidebarEvent event) {
-        if (plugin.save.scores.isEmpty()) return;
         List<UUID> uuids = plugin.save.rankScores();
         List<Component> lines = new ArrayList<>();
         lines.add(Component.text()
-                  .append(VanillaItems.GOLDEN_HORSE_ARMOR.component)
-                  .append(Component.text("Cavetale Grand Prix", NamedTextColor.GOLD))
-                  .append(VanillaItems.ACACIA_BOAT.component)
+                  .append(Mytems.GOLDEN_CUP.component)
+                  .append(Component.text("Grand Prix", NamedTextColor.GOLD))
+                  .append(Mytems.GOLDEN_CUP.component)
                   .build());
-        for (int i = 0; i < 10 && i < uuids.size(); i += 1) {
-            UUID uuid = uuids.get(i);
-            int score = plugin.save.scores.get(uuid);
-            Player thePlayer = Bukkit.getPlayer(uuid);
-            Component name = thePlayer != null
-                ? thePlayer.displayName()
-                : Component.text(PlayerCache.nameForUuid(uuid));
-            lines.add(Component.text()
-                      .append(Component.text("" + (i + 1) + " ", (i < 3 ? NamedTextColor.GOLD : NamedTextColor.BLUE)))
-                      .append(name)
-                      .append(Component.text(" " + score, NamedTextColor.BLUE, TextDecoration.ITALIC))
-                      .build());
+        for (int i = 0; i < 9; i += 1) {
+            final int score;
+            final Component name;
+            if (i < uuids.size()) {
+                UUID uuid = uuids.get(i);
+                score = plugin.save.scores.get(uuid);
+                Player thePlayer = Bukkit.getPlayer(uuid);
+                name = thePlayer != null
+                    ? thePlayer.displayName()
+                    : Component.text(PlayerCache.nameForUuid(uuid));
+            } else {
+                score = 0;
+                name = Component.text("???", NamedTextColor.DARK_GRAY);
+            }
+            lines.add(Component.join(JoinConfiguration.separator(Component.space()), new Component[] {
+                        Glyph.toComponent("" + (i + 1)),
+                        Component.text(score, (i < 3 ? NamedTextColor.GOLD : NamedTextColor.GRAY)),
+                        name,
+                    }));
         }
         Integer playerScoreObj = plugin.save.scores.get(player.getUniqueId());
         int playerScore = playerScoreObj != null ? playerScoreObj : 0;
@@ -498,10 +505,15 @@ public final class EventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
-        if (!plugin.save.event || plugin.save.eventRace == null) return;
-        Race race = plugin.races.named(plugin.save.eventRace);
-        if (race != null && race.getWorld() != null) {
-            event.setSpawnLocation(race.getSpawnLocation());
+        if (plugin.save.event) {
+            if (plugin.save.eventRace == null) {
+                event.setSpawnLocation(Bukkit.getWorlds().get(0).getSpawnLocation());
+                return;
+            }
+            Race race = plugin.races.named(plugin.save.eventRace);
+            if (race != null && race.getWorld() != null) {
+                event.setSpawnLocation(race.getSpawnLocation());
+            }
         }
     }
 }

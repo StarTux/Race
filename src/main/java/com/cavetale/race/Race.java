@@ -484,9 +484,10 @@ public final class Race {
     }
 
     public String listString() {
-        return name
-            + " at=" + tag.worldName + ":" + tag.spawnLocation.simpleString()
-            + " phase=" + tag.phase;
+        return tag.phase
+            + " " + tag.type
+            + " " + name
+            + " " + tag.worldName;
     }
 
     public void setArea(Cuboid cuboid) {
@@ -587,6 +588,8 @@ public final class Race {
                                                          Component.text("Return to Checkpoint", NamedTextColor.LIGHT_PURPLE)));
             if (tag.type == RaceType.HORSE) {
                 player.getInventory().setHelmet(Mytems.COWBOY_HAT.createItemStack());
+            } else if (tag.type == RaceType.BOAT || tag.type == RaceType.ICE_BOAT) {
+                player.getInventory().setHelmet(Mytems.PIRATE_HAT.createItemStack());
             }
         }
         tag.startTime = System.currentTimeMillis();
