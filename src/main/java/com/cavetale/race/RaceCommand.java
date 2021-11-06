@@ -89,6 +89,8 @@ public final class RaceCommand implements TabExecutor {
             .playerCaller(this::mount);
         root.addChild("maxduration").arguments("<seconds>")
             .playerCaller(this::maxDuration);
+        root.addChild("playerreset").denyTabCompletion()
+            .playerCaller(this::playerReset);
         // score
         CommandNode scoreNode = root.addChild("score")
             .description("Grand Prix Scores");
@@ -161,6 +163,7 @@ public final class RaceCommand implements TabExecutor {
         player.sendMessage(a + "goodies " + b + race.tag.goodies.size());
         player.sendMessage(a + "laps " + b + race.tag.laps);
         player.sendMessage(a + "racing " + b + race.tag.countRacers());
+        player.sendMessage(a + "maxDuration " + b + race.tag.maxDuration);
         return true;
     }
 
@@ -469,7 +472,7 @@ public final class RaceCommand implements TabExecutor {
                                           NamedTextColor.YELLOW));
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (player == online) continue;
-            player.teleport(race.getSpawnLocation());
+            online.teleport(race.getSpawnLocation());
         }
         return true;
     }
@@ -514,6 +517,14 @@ public final class RaceCommand implements TabExecutor {
         plugin.save();
         sender.sendMessage(Component.text("Putting winners on pedestals...", NamedTextColor.YELLOW));
         plugin.scoreRanking();
+        return true;
+    }
+
+    boolean playerReset(CommandSender sender, String[] args) {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.setWalkSpeed(0.2f);
+        }
+        sender.sendMessage("Players walk speed reset");
         return true;
     }
 }
