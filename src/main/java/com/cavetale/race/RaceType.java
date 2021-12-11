@@ -78,7 +78,7 @@ public enum RaceType {
                     e.setAdult();
                     e.setAgeLock(true);
                     e.setSaddle(true);
-                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.25);
+                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.30);
                 });
             return pig;
         }
