@@ -93,6 +93,7 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("playerreset").denyTabCompletion()
             .playerCaller(this::playerReset);
         root.addChild("teleport").arguments("<race>")
+            .alias("tp")
             .completers(CommandArgCompleter.supplyList(() -> plugin.races.names()))
             .playerCaller(this::teleport);
         // score
@@ -167,7 +168,8 @@ public final class RaceCommand implements TabExecutor {
         player.sendMessage(a + "goodies " + b + race.tag.goodies.size());
         player.sendMessage(a + "laps " + b + race.tag.laps);
         player.sendMessage(a + "racing " + b + race.tag.countRacers());
-        player.sendMessage(a + "maxDuration " + b + race.tag.maxDuration);
+        player.sendMessage(a + "maxDuration " + b + race.formatTimeShort(race.tag.maxDuration * 1000L)
+                           + " (" + race.tag.maxDuration + ")");
         return true;
     }
 
@@ -501,6 +503,7 @@ public final class RaceCommand implements TabExecutor {
     }
 
     boolean maxDuration(Player player, String[] args) {
+        if (args.length != 1) return false;
         Race race = requireRace(player);
         race.tag.setMaxDuration(requireInt(args[0]));
         race.save();
