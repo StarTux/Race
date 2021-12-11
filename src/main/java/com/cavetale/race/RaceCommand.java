@@ -1,5 +1,6 @@
 package com.cavetale.race;
 
+import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandContext;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
@@ -91,6 +92,9 @@ public final class RaceCommand implements TabExecutor {
             .playerCaller(this::maxDuration);
         root.addChild("playerreset").denyTabCompletion()
             .playerCaller(this::playerReset);
+        root.addChild("teleport").arguments("<race>")
+            .completers(CommandArgCompleter.supplyList(() -> plugin.races.names()))
+            .playerCaller(this::teleport);
         // score
         CommandNode scoreNode = root.addChild("score")
             .description("Grand Prix Scores");
@@ -525,6 +529,17 @@ public final class RaceCommand implements TabExecutor {
             player.setWalkSpeed(0.2f);
         }
         sender.sendMessage("Players walk speed reset");
+        return true;
+    }
+
+    protected boolean teleport(Player player, String[] args) {
+        if (args.length != 1) return false;
+        Race race = plugin.races.named(args[0]);
+        if (race == null) {
+            throw new CommandWarn("Race not found: " + args[0]);
+        }
+        player.teleport(race.getSpawnLocation());
+        player.sendMessage(Component.text("Teleported to race " + race.name));
         return true;
     }
 }

@@ -82,6 +82,14 @@ public final class Races {
         return new ArrayList<>(races);
     }
 
+    public List<String> names() {
+        List<String> result = new ArrayList<>(races.size());
+        for (Race race : races) {
+            result.add(race.name);
+        }
+        return result;
+    }
+
     public void add(Race race) {
         races.add(race);
     }
