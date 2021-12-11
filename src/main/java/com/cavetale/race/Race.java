@@ -90,7 +90,7 @@ public final class Race {
 
     void tickEdit(int ticks) {
         World world = getWorld();
-        tag.area.highlight(world, ticks, 4, 1, loc -> world.spawnParticle(Particle.BARRIER, loc, 1, 0.0, 0.0, 0.0, 0.0));
+        tag.area.highlight(world, ticks, 4, 1, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         tag.spawnArea.highlight(world, ticks, 4, 4, loc -> world.spawnParticle(Particle.VILLAGER_HAPPY, loc, 1, 0.0, 0.0, 0.0, 0.0));
         for (Cuboid area : tag.checkpoints) {
             area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
@@ -277,13 +277,7 @@ public final class Race {
     }
 
     private int getEventScore(int finishIndex) {
-        switch (finishIndex) {
-        case 0: return 9;
-        case 1: return 7;
-        case 2: return 5;
-        case 3: return 3;
-        default: return 1;
-        }
+        return Math.max(0, 10 - finishIndex);
     }
 
     void progressCheckpoint(Player player, Racer racer) {
