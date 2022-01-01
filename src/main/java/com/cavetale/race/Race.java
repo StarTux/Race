@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.item.WardrobeItem;
 import com.cavetale.race.struct.Vec2i;
 import com.cavetale.race.util.Items;
 import java.io.File;
@@ -315,8 +316,10 @@ public final class Race {
                                        + " in " + formatTime(racer.finishTime));
                 }
                 player.setGameMode(GameMode.SPECTATOR);
+                player.setWalkSpeed(0.2f);
+                player.setFlySpeed(0.1f);
                 if (player.getVehicle() != null) player.getVehicle().remove();
-                player.getInventory().clear();
+                clearInventory(player);
             } else {
                 player.showTitle(Title.title(Component.text((racer.lap + 1) + "/" + tag.laps, NamedTextColor.GREEN),
                                              Component.text("Lap " + (racer.lap + 1), NamedTextColor.GREEN),
@@ -563,7 +566,7 @@ public final class Race {
             racer.startVector = tag.startVectors.get(startVectorIndex++);
             player.sendMessage(Component.text("You joined the race!", NamedTextColor.GREEN));
             player.sendActionBar(Component.text("You joined the race!", NamedTextColor.GREEN));
-            player.getInventory().clear();
+            clearInventory(player);
             player.getInventory().addItem(Items.label(Material.COMPASS,
                                                       Component.text("Points at next Checkpoint", NamedTextColor.YELLOW)));
             player.setGameMode(GameMode.ADVENTURE);
@@ -641,9 +644,13 @@ public final class Race {
         for (Racer racer : tag.racers) {
             Player player = racer.getPlayer();
             if (player != null) {
+                clearInventory(player);
                 if (player.getVehicle() != null) {
                     player.getVehicle().remove();
                 }
+                player.setGameMode(GameMode.SPECTATOR);
+                player.setWalkSpeed(0.2f);
+                player.setFlySpeed(0.1f);
             }
         }
         tag.racers.clear();
@@ -780,6 +787,7 @@ public final class Race {
 
     public void onQuit(Player player) {
         player.setWalkSpeed(0.2f);
+        player.setFlySpeed(0.1f);
     }
 
     public void onMoveFromTo(Player player, Location from, Location to) {
@@ -846,7 +854,7 @@ public final class Race {
     protected void loadAllRaceChunks() {
         World world = getWorld();
         if (world == null) return;
-        final int radius = 4;
+        final int radius = 8;
         HashSet<Vec2i> chunksToLoad = new HashSet<>();
         for (Cuboid cuboid : tag.checkpoints) {
             int ax = (cuboid.ax >> 4) - radius;
@@ -873,5 +881,16 @@ public final class Race {
         World world = getWorld();
         if (world == null) return;
         world.removePluginChunkTickets(plugin);
+    }
+
+    public static void clearInventory(Player player) {
+        for (int i = 0; i < player.getInventory().getSize(); i += 1) {
+            ItemStack item = player.getInventory().getItem(i);
+            Mytems mytems = Mytems.forItem(item);
+            if (mytems != null && mytems.getMytem() instanceof WardrobeItem) {
+                continue;
+            }
+            player.getInventory().clear(i);
+        }
     }
 }
