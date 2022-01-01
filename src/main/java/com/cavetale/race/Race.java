@@ -1,12 +1,14 @@
 package com.cavetale.race;
 
 import com.cavetale.mytems.Mytems;
+import com.cavetale.race.struct.Vec2i;
 import com.cavetale.race.util.Items;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -65,6 +67,7 @@ public final class Race {
             }
         }
         clearGoodies();
+        unloadAllRaceChunks();
     }
 
     void tick(int ticks) {
@@ -588,6 +591,7 @@ public final class Race {
         }
         tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
+        loadAllRaceChunks();
     }
 
     public void setLaps(int laps) {
@@ -645,6 +649,7 @@ public final class Race {
         tag.racers.clear();
         tag.phase = Phase.IDLE;
         clearGoodies();
+        unloadAllRaceChunks();
     }
 
     Cuboid getLastCheckpoint(Racer racer) {
@@ -836,5 +841,37 @@ public final class Race {
 
     public boolean isMounted() {
         return tag.type.isMounted();
+    }
+
+    protected void loadAllRaceChunks() {
+        World world = getWorld();
+        if (world == null) return;
+        final int radius = 4;
+        HashSet<Vec2i> chunksToLoad = new HashSet<>();
+        for (Cuboid cuboid : tag.checkpoints) {
+            int ax = (cuboid.ax >> 4) - radius;
+            int bx = (cuboid.bx >> 4) + radius;
+            int az = (cuboid.az >> 4) - radius;
+            int bz = (cuboid.bz >> 4) + radius;
+            for (int z = az; z <= bz; z += 1) {
+                for (int x = ax; x <= bx; x += 1) {
+                    chunksToLoad.add(new Vec2i(x, z));
+                }
+            }
+        }
+        plugin.getLogger().info("[" + name + "] Creating " + chunksToLoad.size() + " chunk tickets...");
+        int count = 0;
+        for (Vec2i vec : chunksToLoad) {
+            if (world.addPluginChunkTicket(vec.x, vec.z, plugin)) {
+                count += 1;
+            }
+        }
+        plugin.getLogger().info("[" + name + "] " + count + "/" + chunksToLoad.size() + " chunk tickets created!");
+    }
+
+    protected void unloadAllRaceChunks() {
+        World world = getWorld();
+        if (world == null) return;
+        world.removePluginChunkTickets(plugin);
     }
 }
