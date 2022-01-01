@@ -68,7 +68,6 @@ public final class Race {
             }
         }
         clearGoodies();
-        unloadAllRaceChunks();
     }
 
     void tick(int ticks) {
@@ -594,7 +593,6 @@ public final class Race {
         }
         tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
-        loadAllRaceChunks();
     }
 
     public void setLaps(int laps) {
@@ -656,7 +654,6 @@ public final class Race {
         tag.racers.clear();
         tag.phase = Phase.IDLE;
         clearGoodies();
-        unloadAllRaceChunks();
     }
 
     Cuboid getLastCheckpoint(Racer racer) {
