@@ -412,8 +412,11 @@ public final class EventListener implements Listener {
         Projectile projectile = event.getEntity();
         Race race = plugin.races.at(projectile.getLocation());
         if (race == null) return;
-        if (!(projectile.getShooter() instanceof Player)) return;
-        Player player = (Player) projectile.getShooter();
+        if (!(projectile.getShooter() instanceof Player player)) return;
+        if (!race.isRacing()) {
+            if (!player.isOp()) event.setCancelled(true);
+            return;
+        }
         Racer racer = race.getRacer(player);
         if (racer == null) {
             event.setCancelled(true);
