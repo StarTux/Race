@@ -20,8 +20,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -49,6 +49,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
+import static net.kyori.adventure.title.Title.Times.times;
 
 @RequiredArgsConstructor
 public final class Race {
@@ -137,7 +138,7 @@ public final class Race {
                 for (Player player : getPresentPlayers()) {
                     player.showTitle(Title.title(Component.text("" + secondsLeft, NamedTextColor.GREEN),
                                                  Component.text("Get Ready", NamedTextColor.GREEN),
-                                                 Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
+                                                 times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.MASTER, 0.2f, 2.0f);
                 }
                 break;
@@ -145,7 +146,7 @@ public final class Race {
                 for (Player player : getPresentPlayers()) {
                     player.showTitle(Title.title(Component.text("GO!", NamedTextColor.GREEN, TextDecoration.ITALIC),
                                                  Component.text("Good Luck", NamedTextColor.GREEN),
-                                                 Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
+                                                 times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
                     player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 0.2f, 2.0f);
                 }
                 break;
@@ -308,7 +309,7 @@ public final class Race {
                 }
                 player.showTitle(Title.title(Component.text("#" + (racer.finishIndex + 1), NamedTextColor.GREEN),
                                              Component.text(formatTime(racer.finishTime), NamedTextColor.GREEN),
-                                             Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(500))));
+                                             times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(500))));
                 for (Player target : getPresentPlayers()) {
                     target.sendMessage(ChatColor.GREEN + player.getName()
                                        + " finished #" + (racer.finishIndex + 1)
@@ -322,9 +323,9 @@ public final class Race {
             } else {
                 player.showTitle(Title.title(Component.text((racer.lap + 1) + "/" + tag.laps, NamedTextColor.GREEN),
                                              Component.text("Lap " + (racer.lap + 1), NamedTextColor.GREEN),
-                                             Title.Times.of(Duration.ofMillis(500),
-                                                            Duration.ofMillis(1000),
-                                                            Duration.ofMillis(0))));
+                                             times(Duration.ofMillis(500),
+                                                   Duration.ofMillis(1000),
+                                                   Duration.ofMillis(0))));
             }
         }
         if (tag.type == RaceType.ELYTRA && player.isGliding()) {
@@ -338,9 +339,9 @@ public final class Race {
                 for (Player player : getPresentPlayers()) {
                     player.showTitle(Title.title(Component.text("Timeout", NamedTextColor.RED),
                                                  Component.text("The race is over", NamedTextColor.RED),
-                                                 Title.Times.of(Duration.ZERO,
-                                                                Duration.ofSeconds(2),
-                                                                Duration.ofSeconds(1))));
+                                                 times(Duration.ZERO,
+                                                       Duration.ofSeconds(2),
+                                                       Duration.ofSeconds(1))));
                     player.sendMessage(Component.text("Timeout! The race is over", NamedTextColor.RED));
                 }
                 stopRace();
@@ -377,7 +378,7 @@ public final class Race {
                 if (racer.checkpointDistanceIncreaseTicks >= 10 && (tag.phaseTicks % 20) == 0) {
                     player.showTitle(Title.title(Component.text("Reverse", NamedTextColor.RED),
                                                  Component.text("Turn Around", NamedTextColor.RED),
-                                                 Title.Times.of(Duration.ZERO, Duration.ofMillis(750), Duration.ZERO)));
+                                                 times(Duration.ZERO, Duration.ofMillis(750), Duration.ZERO)));
                 }
                 if ((ticks % 20) == 0) {
                     List<Vec3i> vecs = cp.enumerate();
@@ -575,7 +576,7 @@ public final class Race {
             player.setFlySpeed(0.0f);
             player.showTitle(Title.title(Component.text("Race", NamedTextColor.GREEN, TextDecoration.ITALIC),
                                          Component.text("The Race Begins", NamedTextColor.GREEN),
-                                         Title.Times.of(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(1))));
+                                         times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(1))));
             player.setWalkSpeed(0f);
             if (tag.type == RaceType.STRIDER) {
                 player.getInventory().addItem(new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK));

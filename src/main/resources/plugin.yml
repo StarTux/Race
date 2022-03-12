@@ -6,19 +6,19 @@ description: Racing Minigame
 website: https://cavetale.com
 
 version: 0.1
-api-version: 1.17
+api-version: 1.18
 
 depend: [Core, Mytems, Sidebar, WorldEdit, PlayerCache, WorldMarker]
 softdepend: []
 
 commands:
   race:
-    aliases: []
+    aliases: [raceedit, raceadmin]
     description: Race Command
-    permission: race.race
+    permission: race.admin
     usage: /race
 
 permissions:
-  race.race:
+  race.admin:
     description: Use /race
     default: op
