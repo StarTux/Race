@@ -281,7 +281,7 @@ public final class Race {
     }
 
     private int getEventScore(int finishIndex) {
-        return Math.max(0, 10 - finishIndex);
+        return Math.max(1, tag.racerCount - finishIndex);
     }
 
     void progressCheckpoint(Player player, Racer racer) {
@@ -306,6 +306,10 @@ public final class Race {
                                        .append(Component.text(score, NamedTextColor.BLUE))
                                        .append(Component.text(" points for a total of "))
                                        .append(Component.text(totalScore, NamedTextColor.BLUE)));
+                    if (racer.finishIndex == 0) {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " "
+                                               + String.join(" ", tag.type.getWinnerTitles()));
+                    }
                 }
                 player.showTitle(Title.title(Component.text("#" + (racer.finishIndex + 1), NamedTextColor.GREEN),
                                              Component.text(formatTime(racer.finishTime), NamedTextColor.GREEN),
@@ -592,6 +596,7 @@ public final class Race {
                 player.getInventory().setHelmet(Mytems.PIRATE_HAT.createItemStack());
             }
         }
+        tag.racerCount = tag.racers.size();
         tag.startTime = System.currentTimeMillis();
         setPhase(Phase.START);
     }

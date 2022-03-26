@@ -18,6 +18,7 @@ public final class Tag {
     protected List<Cuboid> checkpoints = new ArrayList<>();
     protected int phaseTicks;
     protected List<Racer> racers = new ArrayList<>();
+    protected int racerCount = 0;
     protected long startTime = 0;
     protected int finishIndex = 0;
     protected int laps = 1;
