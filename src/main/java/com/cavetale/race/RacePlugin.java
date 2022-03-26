@@ -63,7 +63,7 @@ public final class RacePlugin extends JavaPlugin {
         Json.save(saveFile, save);
     }
 
-    protected void scoreRanking() {
+    protected void scoreRanking(boolean giveTitle) {
         World world = Bukkit.getWorlds().get(0);
         AreasFile areasFile;
         areasFile = Json.load(new File(new File(Bukkit.getWorlds().get(0).getWorldFolder(), "areas"), "Race.json"),
@@ -83,6 +83,9 @@ public final class RacePlugin extends JavaPlugin {
             player.teleport(location);
             player.setGameMode(GameMode.ADVENTURE);
             Fireworks.spawnFirework(location.add(0, 2, 0));
+            if (giveTitle && index <= 2) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " GrandPrix");
+            }
         }
         for (Area area : areasFile.getAreas().getViewer()) {
             List<Vec3i> viewerVecs = area.enumerate();

@@ -105,6 +105,9 @@ public final class RaceCommand implements TabExecutor {
         scoreNode.addChild("pedestal").denyTabCompletion()
             .description("Put winners on pedestals")
             .senderCaller(this::scorePedestal);
+        scoreNode.addChild("reward").denyTabCompletion()
+            .description("Give winners rewards")
+            .senderCaller(this::scoreReward);
         plugin.getCommand("race").setExecutor(this);
     }
 
@@ -523,7 +526,15 @@ public final class RaceCommand implements TabExecutor {
         plugin.save.eventRace = null;
         plugin.save();
         sender.sendMessage(Component.text("Putting winners on pedestals...", NamedTextColor.YELLOW));
-        plugin.scoreRanking();
+        plugin.scoreRanking(false);
+        return true;
+    }
+
+    boolean scoreReward(CommandSender sender, String[] args) {
+        plugin.save.eventRace = null;
+        plugin.save();
+        sender.sendMessage(Component.text("Giving winners rewards...", NamedTextColor.YELLOW));
+        plugin.scoreRanking(true);
         return true;
     }
 
