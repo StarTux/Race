@@ -182,6 +182,17 @@ public final class Cuboid implements EditMenuAdapter {
     }
 
     @Override
+    public ItemStack getMenuIcon(EditMenuNode node) {
+        return new ItemStack(Material.WOODEN_AXE);
+    }
+
+    @Override
+    public List<Component> getTooltip(EditMenuNode node) {
+        return List.of(text(getMin().toString(), WHITE),
+                       text(getMax().toString(), WHITE));
+    }
+
+    @Override
     public List<EditMenuButton> getEditMenuButtons(EditMenuNode node) {
         return List.of(new EditMenuButton[] {
                 new EditMenuButton() {

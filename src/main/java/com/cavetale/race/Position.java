@@ -59,8 +59,7 @@ public final class Position implements EditMenuAdapter {
 
     @Override
     public List<Component> getTooltip(EditMenuNode node) {
-        return List.of(text("Position", WHITE),
-                       text(simpleString(), GRAY));
+        return List.of(text(simpleString(), WHITE));
     }
 
     @Override
