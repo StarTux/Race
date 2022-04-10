@@ -1,22 +1,46 @@
 package com.cavetale.race;
 
+import com.cavetale.core.editor.EditMenuAdapter;
+import com.cavetale.core.editor.EditMenuButton;
+import com.cavetale.core.editor.EditMenuException;
+import com.cavetale.core.editor.EditMenuItem;
+import com.cavetale.core.editor.EditMenuNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.inventory.ItemStack;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
-@Value
-public final class Cuboid {
+@Getter @AllArgsConstructor @NoArgsConstructor
+public final class Cuboid implements EditMenuAdapter {
+    @EditMenuItem(hidden = true)
     public static final Cuboid ZERO = new Cuboid(0, 0, 0, 0, 0, 0);
-    public final int ax;
-    public final int ay;
-    public final int az;
-    public final int bx;
-    public final int by;
-    public final int bz;
+    private int ax;
+    private int ay;
+    private int az;
+    private int bx;
+    private int by;
+    private int bz;
+
+    public void load(Cuboid other) {
+        ax = other.ax;
+        ay = other.ay;
+        az = other.az;
+        bx = other.bx;
+        by = other.by;
+        bz = other.bz;
+    }
 
     public boolean contains(int x, int y, int z) {
         return x >= ax && x <= bx
@@ -155,5 +179,45 @@ public final class Cuboid {
 
     public Block getBottomBlock(World world) {
         return world.getBlockAt((ax + bx) / 2, ay, (az + bz) / 2);
+    }
+
+    @Override
+    public List<EditMenuButton> getEditMenuButtons(EditMenuNode node) {
+        return List.of(new EditMenuButton[] {
+                new EditMenuButton() {
+                    @Override public ItemStack getMenuIcon() {
+                        return new ItemStack(Material.ENDER_PEARL);
+                    }
+
+                    @Override public List<Component> getTooltip() {
+                        return List.of(text("Teleport", GREEN));
+                    }
+
+                    @Override public void onClick(Player player, ClickType click) {
+                        if (click.isLeftClick()) {
+                            player.teleport(getCenter().toLocation(player.getWorld()));
+                            player.sendMessage(text("Teleported: " + getShortInfo(), GREEN));
+                        }
+                    }
+                },
+                new EditMenuButton() {
+                    @Override public ItemStack getMenuIcon() {
+                        return new ItemStack(Material.WOODEN_AXE);
+                    }
+
+                    @Override public List<Component> getTooltip() {
+                        return List.of(text("Set to selection", GREEN));
+                    }
+
+                    @Override public void onClick(Player player, ClickType click) {
+                        if (click.isLeftClick()) {
+                            Cuboid other = WorldEdit.getSelection(player);
+                            if (other == null) throw new EditMenuException("No selection!");
+                            load(other);
+                            player.sendMessage(text("Set to selection: " + getShortInfo(), GREEN));
+                        }
+                    }
+                },
+            });
     }
 }

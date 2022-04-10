@@ -15,6 +15,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class RacePlugin extends JavaPlugin {
+    protected static RacePlugin instance;
     protected final RaceCommand raceCommand = new RaceCommand(this);
     protected final Races races = new Races(this);
     protected final EventListener eventListener = new EventListener(this);
@@ -24,6 +25,11 @@ public final class RacePlugin extends JavaPlugin {
 
     public File getSaveFolder() {
         return new File(getDataFolder(), "races");
+    }
+
+    @Override
+    public void onLoad() {
+        instance = this;
     }
 
     @Override

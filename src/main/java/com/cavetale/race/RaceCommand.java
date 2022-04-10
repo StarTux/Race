@@ -4,6 +4,9 @@ import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandContext;
 import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
+import com.cavetale.core.editor.EditMenuDelegate;
+import com.cavetale.core.editor.EditMenuNode;
+import com.cavetale.core.editor.Editor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,6 +56,8 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("laps")
             .caller(this::laps)
             .description("Change lap number");
+        root.addChild("editor")
+            .playerCaller(this::editor);
         CommandNode checkpointNode = root.addChild("checkpoint")
             .description("Checkpoint commands");
         checkpointNode.addChild("list")
@@ -346,6 +351,15 @@ public final class RaceCommand implements TabExecutor {
         race.save();
         context.message(ChatColor.YELLOW + race.name + ": Laps updated: " + race.tag.laps);
         return true;
+    }
+
+    private void editor(Player player) {
+        Race race = requireRace(player);
+        Editor.get().open(plugin, player, race.tag, new EditMenuDelegate() {
+                @Override public Runnable getSaveFunction(EditMenuNode node) {
+                    return race::save;
+                }
+            });
     }
 
     boolean debug(CommandContext context, CommandNode node, String[] args) {

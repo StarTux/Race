@@ -535,16 +535,16 @@ public final class Race {
         Vec3i vector = racer.startVector;
         Cuboid firstCheckpoint = tag.checkpoints.get(0);
         float yaw;
-        if (vector.x > firstCheckpoint.bx) {
+        if (vector.x > firstCheckpoint.getBx()) {
             // face west
             yaw = 90f;
-        } else if (vector.z > firstCheckpoint.bz) {
+        } else if (vector.z > firstCheckpoint.getBz()) {
             // face north
             yaw = 180f;
-        } else if (vector.x < firstCheckpoint.ax) {
+        } else if (vector.x < firstCheckpoint.getAx()) {
             // face east
             yaw = 270f;
-        } else if (vector.z < firstCheckpoint.az) {
+        } else if (vector.z < firstCheckpoint.getAz()) {
             // face south
             yaw = 0f;
         } else {
@@ -860,10 +860,10 @@ public final class Race {
         final int radius = 8;
         HashSet<Vec2i> chunksToLoad = new HashSet<>();
         for (Cuboid cuboid : tag.checkpoints) {
-            int ax = (cuboid.ax >> 4) - radius;
-            int bx = (cuboid.bx >> 4) + radius;
-            int az = (cuboid.az >> 4) - radius;
-            int bz = (cuboid.bz >> 4) + radius;
+            int ax = (cuboid.getAx() >> 4) - radius;
+            int bx = (cuboid.getBx() >> 4) + radius;
+            int az = (cuboid.getAz() >> 4) - radius;
+            int bz = (cuboid.getBz() >> 4) + radius;
             for (int z = az; z <= bz; z += 1) {
                 for (int x = ax; x <= bx; x += 1) {
                     chunksToLoad.add(new Vec2i(x, z));

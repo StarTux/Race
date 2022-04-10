@@ -1,8 +1,12 @@
 package com.cavetale.race;
 
+import com.cavetale.core.editor.EditMenuAdapter;
+import com.cavetale.core.editor.EditMenuNode;
 import com.cavetale.race.util.Rnd;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.TreeSpecies;
@@ -14,15 +18,18 @@ import org.bukkit.entity.Strider;
 import org.bukkit.entity.Vehicle;
 import org.bukkit.inventory.ItemStack;
 
-public enum RaceType {
-    WALK,
-    STRIDER,
-    PARKOUR,
-    ICE_BOAT,
-    BOAT,
-    HORSE,
-    PIG,
-    ELYTRA;
+@RequiredArgsConstructor
+public enum RaceType implements EditMenuAdapter {
+    WALK(() -> new ItemStack(Material.IRON_BOOTS)),
+    STRIDER(() -> new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK)),
+    PARKOUR(() -> new ItemStack(Material.TRIDENT)),
+    ICE_BOAT(() -> new ItemStack(Material.ICE)),
+    BOAT(() -> new ItemStack(Material.OAK_BOAT)),
+    HORSE(() -> new ItemStack(Material.IRON_HORSE_ARMOR)),
+    PIG(() -> new ItemStack(Material.CARROT_ON_A_STICK)),
+    ELYTRA(() -> new ItemStack(Material.ELYTRA));
+
+    public final Supplier<ItemStack> iconSupplier;
 
     public boolean isMounted() {
         switch (this) {
@@ -100,5 +107,10 @@ public enum RaceType {
         default:
             return List.of("Falcon");
         }
+    }
+
+    @Override
+    public ItemStack getMenuIcon(EditMenuNode node) {
+        return iconSupplier.get();
     }
 }

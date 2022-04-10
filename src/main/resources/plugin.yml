@@ -13,7 +13,7 @@ softdepend: []
 
 commands:
   race:
-    aliases: [raceedit, raceadmin]
+    aliases: [raceedit, raceadmin, redit]
     description: Race Command
     permission: race.admin
     usage: /race
