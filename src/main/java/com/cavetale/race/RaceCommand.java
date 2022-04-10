@@ -12,13 +12,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 @RequiredArgsConstructor
 public final class RaceCommand implements TabExecutor {
@@ -32,9 +33,9 @@ public final class RaceCommand implements TabExecutor {
         root.addChild("info")
             .playerCaller(this::info)
             .description("Info about current race course");
-        root.addChild("create")
-            .caller(this::create)
-            .description("Create a new race");
+        root.addChild("create").arguments("<name>")
+            .description("Create a new race")
+            .playerCaller(this::create);
         root.addChild("setspawn")
             .caller(this::setspawn)
             .description("Set race spawn location");
@@ -181,11 +182,10 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean create(CommandContext context, CommandNode node, String[] args) {
+    private boolean create(Player player, String[] args) {
         if (args.length != 1) return false;
         String name = args[0];
         Race race = plugin.races.named(name);
-        Player player = context.requirePlayer();
         Cuboid cuboid = requireWorldEditSelection(player);
         if (race == null) {
             race = new Race(plugin, name, new Tag());
@@ -195,7 +195,7 @@ public final class RaceCommand implements TabExecutor {
         race.setArea(cuboid);
         race.setSpawnLocation(player.getLocation());
         race.save();
-        context.message(ChatColor.YELLOW + "Race created: " + race.listString());
+        player.sendMessage(text("Race created: " + race.listString(), YELLOW));
         return true;
     }
 
@@ -468,15 +468,15 @@ public final class RaceCommand implements TabExecutor {
             try {
                 plugin.save.event = Boolean.parseBoolean(args[0]);
             } catch (IllegalArgumentException iae) {
-                player.sendMessage(Component.text("Invalid boolean: " + args[0], NamedTextColor.RED));
+                player.sendMessage(Component.text("Invalid boolean: " + args[0], RED));
                 return true;
             }
             plugin.save();
         }
         player.sendMessage(Component.text("Event mode is ")
                            .append(plugin.save.event
-                                   ? Component.text("Enabled", NamedTextColor.GREEN)
-                                   : Component.text("Disabled", NamedTextColor.GREEN)));
+                                   ? Component.text("Enabled", GREEN)
+                                   : Component.text("Disabled", GREEN)));
         return true;
     }
 
@@ -484,7 +484,7 @@ public final class RaceCommand implements TabExecutor {
         if (args.length == 1 && args[0].equals("reset")) {
             plugin.save.eventRace = null;
             plugin.save();
-            player.sendMessage(Component.text("Event race reset", NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("Event race reset", YELLOW));
             return true;
         }
         if (args.length != 0) return false;
@@ -492,7 +492,7 @@ public final class RaceCommand implements TabExecutor {
         plugin.save.eventRace = race.name;
         plugin.save();
         player.sendMessage(Component.text("Event race set to " + plugin.save.eventRace,
-                                          NamedTextColor.YELLOW));
+                                          YELLOW));
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (player == online) continue;
             online.teleport(race.getSpawnLocation());
@@ -525,21 +525,21 @@ public final class RaceCommand implements TabExecutor {
         race.tag.setMaxDuration(requireInt(args[0]));
         race.save();
         player.sendMessage(Component.text("Max duration set to " + race.tag.getMaxDuration() + " seconds",
-                                          NamedTextColor.YELLOW));
+                                          YELLOW));
         return true;
     }
 
     boolean scoreReset(CommandSender sender, String[] args) {
         plugin.save.scores.clear();
         plugin.save();
-        sender.sendMessage(Component.text("All scores were reset!", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("All scores were reset!", YELLOW));
         return true;
     }
 
     boolean scorePedestal(CommandSender sender, String[] args) {
         plugin.save.eventRace = null;
         plugin.save();
-        sender.sendMessage(Component.text("Putting winners on pedestals...", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("Putting winners on pedestals...", YELLOW));
         plugin.scoreRanking(false);
         return true;
     }
@@ -547,7 +547,7 @@ public final class RaceCommand implements TabExecutor {
     boolean scoreReward(CommandSender sender, String[] args) {
         plugin.save.eventRace = null;
         plugin.save();
-        sender.sendMessage(Component.text("Giving winners rewards...", NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("Giving winners rewards...", YELLOW));
         plugin.scoreRanking(true);
         return true;
     }
