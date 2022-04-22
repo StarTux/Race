@@ -33,6 +33,10 @@ public final class Vec3i {
         return new Vec3i(x + dx, y + dy, z + dz);
     }
 
+    public Vec3i subtract(Vec3i o) {
+        return new Vec3i(x - o.x, y - o.y, z - o.z);
+    }
+
     public Vec3i multiply(int mul) {
         return new Vec3i(x * mul, y * mul, z * mul);
     }

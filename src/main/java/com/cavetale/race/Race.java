@@ -531,25 +531,10 @@ public final class Race {
             .collect(Collectors.toList());
     }
 
-    Location getStartLocation(Racer racer) {
+    private Location getStartLocation(Racer racer) {
         Vec3i vector = racer.startVector;
         Cuboid firstCheckpoint = tag.checkpoints.get(0);
-        float yaw;
-        if (vector.x > firstCheckpoint.getBx()) {
-            // face west
-            yaw = 90f;
-        } else if (vector.z > firstCheckpoint.getBz()) {
-            // face north
-            yaw = 180f;
-        } else if (vector.x < firstCheckpoint.getAx()) {
-            // face east
-            yaw = 270f;
-        } else if (vector.z < firstCheckpoint.getAz()) {
-            // face south
-            yaw = 0f;
-        } else {
-            yaw = 0f;
-        }
+        float yaw = Yaw.yaw(vector, firstCheckpoint);
         Location location = vector.toLocation(getWorld());
         location.setYaw(yaw);
         return location;
