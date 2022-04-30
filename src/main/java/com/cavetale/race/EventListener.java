@@ -70,10 +70,14 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
+        if (event instanceof EntityDamageByEntityEvent) return;
         Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null) return;
-        if (event.getEntity() instanceof Player) {
-            race.onDamage((Player) event.getEntity(), event);
+        if (event.getCause() == DamageCause.ENTITY_EXPLOSION || event.getCause() == DamageCause.BLOCK_EXPLOSION) {
+            onVehicleExplosion(event.getEntity(), race);
+        }
+        if (event.getEntity() instanceof Player player) {
+            race.onDamage(player, event);
         }
         if (event.getEntity() instanceof EnderCrystal) {
             event.setCancelled(true);
@@ -86,34 +90,41 @@ public final class EventListener implements Listener {
         Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null) return;
         event.setCancelled(true);
-        if (event.getEntity() instanceof Player player && event.getCause() == DamageCause.ENTITY_EXPLOSION) {
-            event.setCancelled(true);
             if (event.getDamager() instanceof Firework) return;
-            Racer racer = race.getRacer(player);
-            if (racer == null || racer.isInvincible()) return;
-            Entity vehicle = player.getVehicle();
-            if (vehicle instanceof LivingEntity living) {
-                double health = living.getHealth();
-                final double dmg = 10;
-                if (health - dmg >= 0.5) {
-                    living.setHealth(health - dmg);
-                    player.sendMessage(ChatColor.RED + "Mount damaged");
-                } else {
-                    vehicle.remove();
-                    player.sendMessage(ChatColor.RED + "Mount destroyed");
-                    racer.remountCooldown = 60;
-                    race.setCoins(player, racer, 0);
-                }
-            } else if (vehicle != null) {
+        if (event.getCause() == DamageCause.ENTITY_EXPLOSION || event.getCause() == DamageCause.BLOCK_EXPLOSION) {
+            onVehicleExplosion(event.getEntity(), race);
+        }
+    }
+
+    private void onVehicleExplosion(Entity entity, Race race) {
+        List<Entity> passengers = entity.getPassengers();
+        if (passengers == null || passengers.isEmpty()) return;
+        if (passengers.get(0) instanceof Player player) {
+            onExplosionDamage(player, race);
+        }
+    }
+
+    private void onExplosionDamage(Player player, Race race) {
+        Racer racer = race.getRacer(player);
+        if (racer == null || racer.isInvincible()) return;
+        Entity vehicle = player.getVehicle();
+        if (vehicle instanceof LivingEntity living) {
+            double health = living.getHealth();
+            final double dmg = 10;
+            if (health - dmg >= 0.5) {
+                living.setHealth(health - dmg);
+                player.sendMessage(ChatColor.RED + "Mount damaged");
+            } else {
                 vehicle.remove();
                 player.sendMessage(ChatColor.RED + "Mount destroyed");
                 racer.remountCooldown = 60;
                 race.setCoins(player, racer, 0);
             }
-            event.getDamager().remove();
-        }
-        if (event.getDamager() instanceof Firework) {
-            event.setCancelled(true);
+        } else if (vehicle != null) {
+            vehicle.remove();
+            player.sendMessage(ChatColor.RED + "Mount destroyed");
+            racer.remountCooldown = 60;
+            race.setCoins(player, racer, 0);
         }
     }
 
@@ -240,15 +251,16 @@ public final class EventListener implements Listener {
         if (race == null || !race.isMounted() || !race.isRacing()) return;
         if (!(event.getEntity() instanceof Player player)) return;
         Racer racer = race.getRacer(player);
-        if (racer == null || !racer.racing || racer.finished) return;
-        if (race.tag.type != RaceType.BOAT) {
-            event.setCancelled(true);
-        } else {
-            racer.remountCooldown = 100;
-            race.setCoins(player, racer, 0);
-            if (event.getDismounted().getType() == EntityType.BOAT) {
+        if (racer != null && racer.racing && !racer.finished) {
+            if (race.tag.type != RaceType.BOAT) {
+                event.setCancelled(true);
+            } else {
+                racer.remountCooldown = 100;
+                race.setCoins(player, racer, 0);
                 event.getDismounted().remove();
             }
+        } else {
+            event.getDismounted().remove();
         }
     }
 
@@ -327,6 +339,7 @@ public final class EventListener implements Listener {
         Racer racer = race.getRacer(player);
         if (racer == null || !racer.racing || racer.finished) return;
         racer.remountCooldown = 100;
+        race.setCoins(player, racer, 0);
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)

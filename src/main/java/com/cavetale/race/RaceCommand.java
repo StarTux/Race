@@ -8,6 +8,7 @@ import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.editor.EditMenuDelegate;
 import com.cavetale.core.editor.EditMenuNode;
 import com.cavetale.core.editor.Editor;
+import com.winthier.playercache.PlayerCache;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -120,6 +121,11 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         scoreNode.addChild("reward").denyTabCompletion()
             .description("Give winners rewards")
             .senderCaller(this::scoreReward);
+        scoreNode.addChild("add").arguments("<player> <amount>")
+            .completers(PlayerCache.NAME_COMPLETER,
+                        CommandArgCompleter.integer(i -> true))
+            .description("Modify player score")
+            .senderCaller(this::scoreAdd);
         plugin.getCommand("race").setExecutor(this);
     }
 
@@ -459,12 +465,21 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
     }
 
     private boolean coins(CommandContext context, CommandNode node, String[] args) {
-        if (args.length != 1) return false;
+        if (args.length < 1) return false;
         Player player = context.requirePlayer();
         switch (args[0]) {
         case "add": {
+            if (args.length != 1 && args.length != 4) return false;
             Race race = requireRace(player);
-            Vec3i vec = requireWorldEditSelection(player).getMin();
+            int dx = 0;
+            int dy = 0;
+            int dz = 0;
+            if (args.length >= 2) {
+                dx = requireInt(args[1]);
+                dy = requireInt(args[2]);
+                dz = requireInt(args[3]);
+            }
+            Vec3i vec = requireWorldEditSelection(player).getMin().add(dx, dy, dz);
             if (race.tag.coins.contains(vec)) {
                 throw new CommandWarn("Coin already exists: " + vec);
             }
@@ -474,6 +489,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
             return true;
         }
         case "remove": {
+            if (args.length != 1) return false;
             Race race = requireRace(player);
             Vec3i vec = requireWorldEditSelection(player).getMin();
             if (!race.tag.coins.contains(vec)) {
@@ -485,6 +501,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
             return true;
         }
         case "clear": {
+            if (args.length != 1) return false;
             Race race = requireRace(player);
             int count = race.tag.coins.size();
             race.tag.coins.clear();
@@ -583,6 +600,16 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         plugin.save();
         sender.sendMessage(Component.text("Giving winners rewards...", YELLOW));
         plugin.scoreRanking(true);
+        return true;
+    }
+
+    private boolean scoreAdd(CommandSender sender, String[] args) {
+        if (args.length != 2) return false;
+        PlayerCache target = PlayerCache.require(args[0]);
+        int amount = requireInt(args[1]);
+        plugin.save.scores.compute(target.uuid, (u, i) -> i != null ? i + amount : amount);
+        plugin.save();
+        sender.sendMessage("Score of " + target.name + " changed to " + plugin.save.scores.get(target.uuid));
         return true;
     }
 

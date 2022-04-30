@@ -127,7 +127,10 @@ public enum GoodyItem {
               List.of(text("Strike Lighning", AQUA),
                       text("Strike everyone ahead of", GRAY),
                       text("you with lightning!", GRAY)),
-              (race, player, racer) -> racer.rank > 3 ? 0.05 : 0.0,
+              (race, player, racer) -> {
+                  if (racer.rank < 3) return 0.0;
+                  return racer.rank / Math.max(1.0, (double) race.tag.racerCount);
+              },
               (race, player, racer, item) -> {
                   item.subtract(1);
                   int count = 0;
@@ -142,7 +145,7 @@ public enum GoodyItem {
                       if (vehicle != null) {
                           if (vehicle instanceof LivingEntity living) {
                               final double health = living.getHealth();
-                              final double dmg = 10;
+                              final double dmg = 20;
                               if (health - dmg >= 0.5) {
                                   living.setHealth(health - dmg);
                               } else {

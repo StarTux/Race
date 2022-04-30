@@ -92,6 +92,7 @@ public enum RaceType implements EditMenuAdapter {
                     e.setAgeLock(true);
                     e.setSaddle(true);
                     e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.30);
+                    e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(15.0);
                 });
             return pig;
         }

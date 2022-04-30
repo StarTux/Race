@@ -212,7 +212,7 @@ public final class Race {
             });
         firework.detonate();
         giveGoody(player, racer);
-        loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.8f, 2.0f);
+        loc.getWorld().playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 1.0f, 2.0f);
         racer.goodyCooldown = System.currentTimeMillis() + 3000L;
     }
 
@@ -261,13 +261,8 @@ public final class Race {
         coin.entity.remove();
         coin.entity = null;
         coin.cooldown = 20 * 60;
-        loc.getWorld().playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 1.0f, 2.0f);
         setCoins(player, racer, racer.coins + 1);
-        Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
-                e.setPersistent(false);
-                e.setFireworkMeta(Fireworks.simpleFireworkMeta());
-            });
-        firework.detonate();
+        loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.5f, 2.0f);
     }
 
     protected void setCoins(Player player, Racer racer, int value) {
@@ -303,7 +298,6 @@ public final class Race {
 
     private void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
-        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
         racer.checkpointDistanceIncreaseTicks = 0;
         if (racer.checkpointIndex >= tag.checkpoints.size()) {
             racer.checkpointIndex = 0;
@@ -388,9 +382,10 @@ public final class Race {
             passThroughBlock(player, racer, loc.getBlock().getRelative(0, 2, 0));
             try {
                 Cuboid cp = tag.checkpoints.get(racer.checkpointIndex);
-                Vec3i pos = Vec3i.of(racer.getPlayer().getLocation().getBlock());
+                Vec3i pos = Vec3i.of(loc.getBlock());
                 int oldCheckpointDistance = racer.checkpointDistance;
-                racer.checkpointDistance = pos.distanceSquared(cp.getCenter());
+                Vec3i center = cp.getCenter();
+                racer.checkpointDistance = pos.distanceSquared(center);
                 if (racer.checkpointDistance > oldCheckpointDistance) {
                     racer.checkpointDistanceIncreaseTicks += 1;
                 } else if (racer.checkpointDistance < oldCheckpointDistance) {
@@ -403,8 +398,24 @@ public final class Race {
                 }
                 if ((ticks % 20) == 0) {
                     List<Vec3i> vecs = cp.enumerate();
-                    Location center = Rnd.pick(vecs).toLocation(getWorld()).add(0.0, 0.5, 0.0);
-                    player.spawnParticle(Particle.FIREWORKS_SPARK, center, 20, 0.0, 0.0, 0.0, 0.2);
+                    Location particleLocation = Rnd.pick(vecs).toLocation(getWorld()).add(0.0, 0.5, 0.0);
+                    player.spawnParticle(Particle.FIREWORKS_SPARK, particleLocation, 20, 0.0, 0.0, 0.0, 0.2);
+                }
+                Vector playerDirection = loc.getDirection();
+                Vec3i direction = center.subtract(pos);
+                double playerAngle = Math.atan2(playerDirection.getZ(), playerDirection.getX());
+                double targetAngle = Math.atan2((double) direction.z, (double) direction.x);
+                if (Double.isFinite(playerAngle) && Double.isFinite(targetAngle)) {
+                    double angle = targetAngle - playerAngle;
+                    if (angle > Math.PI) angle -= 2.0 * Math.PI;
+                    if (angle < -Math.PI) angle += 2.0 * Math.PI;
+                    if (angle < Math.PI * -0.25) {
+                        player.sendActionBar(Mytems.ARROW_LEFT.component);
+                    } else if (angle > Math.PI * 0.25) {
+                        player.sendActionBar(Mytems.ARROW_RIGHT.component);
+                    } else {
+                        player.sendActionBar(Mytems.ARROW_UP.component);
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -654,8 +665,8 @@ public final class Race {
     }
 
     public Cuboid getLastCheckpoint(Racer racer) {
-        if (racer.checkpointIndex == 0) return tag.spawnArea;
-        if (racer.checkpointIndex > tag.checkpoints.size()) return tag.spawnArea;
+        if (racer.checkpointIndex == 0) return tag.checkpoints.get(tag.checkpoints.size() - 1);
+        if (racer.checkpointIndex > tag.checkpoints.size()) return tag.checkpoints.get(0);
         return tag.checkpoints.get(racer.checkpointIndex - 1);
     }
 
@@ -866,7 +877,7 @@ public final class Race {
         Racer theRacer = getRacer(player);
         if (theRacer != null) {
             lines.add(text("You are #" + (theRacer.rank + 1) + "/" + tag.countAllRacers(), GREEN));
-            lines.add(join(noSeparators(), Mytems.GOLDEN_COIN.component, text(" " + theRacer.coins, WHITE)));
+            lines.add(join(noSeparators(), Mytems.GOLDEN_COIN.component, text(" " + theRacer.coins, WHITE), text("/" + MAX_COINS, GRAY)));
             if (!theRacer.finished) {
                 lines.add(text("Lap " + (theRacer.lap + 1) + "/" + tag.laps, GREEN));
             } else {
