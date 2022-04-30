@@ -1,9 +1,13 @@
 package com.cavetale.race;
 
 import com.cavetale.core.util.Json;
+import com.cavetale.fam.trophy.SQLTrophy;
+import com.cavetale.fam.trophy.Trophies;
+import com.cavetale.mytems.Mytems;
 import com.cavetale.race.struct.Area;
 import com.cavetale.race.struct.AreasFile;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -13,6 +17,11 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.space;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.TextColor.color;
 
 public final class RacePlugin extends JavaPlugin {
     protected static RacePlugin instance;
@@ -69,7 +78,7 @@ public final class RacePlugin extends JavaPlugin {
         Json.save(saveFile, save);
     }
 
-    protected void scoreRanking(boolean giveTitle) {
+    protected void scoreRanking(boolean giveRewards) {
         World world = Bukkit.getWorlds().get(0);
         AreasFile areasFile;
         areasFile = Json.load(new File(new File(Bukkit.getWorlds().get(0).getWorldFolder(), "areas"), "Race.json"),
@@ -89,7 +98,7 @@ public final class RacePlugin extends JavaPlugin {
             player.teleport(location);
             player.setGameMode(GameMode.ADVENTURE);
             Fireworks.spawnFirework(location.add(0, 2, 0));
-            if (giveTitle && index <= 2) {
+            if (giveRewards && index <= 2) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " GrandPrix");
             }
         }
@@ -108,6 +117,35 @@ public final class RacePlugin extends JavaPlugin {
                 player.setGameMode(GameMode.ADVENTURE);
             }
             break;
+        }
+        if (giveRewards) {
+            var title = join(noSeparators(),
+                             text("G", color(0xffff00)),
+                             text("r", color(0xffff2b)),
+                             text("a", color(0xffff55)),
+                             text("n", color(0xffff80)),
+                             text("d", color(0xffffaa)),
+                             space(),
+                             text("P", color(0xffff80)),
+                             text("r", color(0xffff55)),
+                             text("i", color(0xffff2b)),
+                             text("x", color(0xffff00)));
+            List<SQLTrophy> trophies = new ArrayList<>();
+            int i = 0;
+            for (UUID uuid : uuids) {
+                final int placement = ++i;
+                final int score = save.scores.getOrDefault(uuid, 0);
+                if (score == 0) break;
+                final Mytems mytems;
+                switch (placement) {
+                case 1: mytems = Mytems.GOLDEN_CUP; break;
+                case 2: mytems = Mytems.SILVER_CUP; break;
+                case 3: mytems = Mytems.BRONZE_CUP; break;
+                default: mytems = Mytems.BLUNDERBUSS;
+                }
+                trophies.add(new SQLTrophy(uuid, "race_grand_prix", placement, mytems, title, "You earned " + score + " points"));
+            }
+            Trophies.insertTrophies(trophies);
         }
     }
 }

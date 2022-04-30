@@ -1,6 +1,5 @@
 package com.cavetale.race;
 
-import com.cavetale.core.font.Unicode;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.sidebar.PlayerSidebarEvent;
@@ -13,23 +12,18 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.JoinConfiguration;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
-import org.bukkit.entity.TNTPrimed;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -44,7 +38,6 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -61,6 +54,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
 import org.spigotmc.event.entity.EntityDismountEvent;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.JoinConfiguration.separator;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 @RequiredArgsConstructor
 public final class EventListener implements Listener {
@@ -87,41 +85,35 @@ public final class EventListener implements Listener {
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null) return;
-        if (event.getDamager() instanceof Player) {
+        event.setCancelled(true);
+        if (event.getEntity() instanceof Player player && event.getCause() == DamageCause.ENTITY_EXPLOSION) {
             event.setCancelled(true);
-        }
-        if (event.getDamager() instanceof AbstractArrow && event.getEntity() instanceof Player && event.getCause() == DamageCause.ENTITY_EXPLOSION) {
-            event.setCancelled(true);
-            Player player = (Player) event.getEntity();
+            if (event.getDamager() instanceof Firework) return;
             Racer racer = race.getRacer(player);
-            if (racer == null) return;
+            if (racer == null || racer.isInvincible()) return;
             Entity vehicle = player.getVehicle();
-            if (vehicle != null) {
+            if (vehicle instanceof LivingEntity living) {
+                double health = living.getHealth();
+                final double dmg = 10;
+                if (health - dmg >= 0.5) {
+                    living.setHealth(health - dmg);
+                    player.sendMessage(ChatColor.RED + "Mount damaged");
+                } else {
+                    vehicle.remove();
+                    player.sendMessage(ChatColor.RED + "Mount destroyed");
+                    racer.remountCooldown = 60;
+                    race.setCoins(player, racer, 0);
+                }
+            } else if (vehicle != null) {
                 vehicle.remove();
                 player.sendMessage(ChatColor.RED + "Mount destroyed");
                 racer.remountCooldown = 60;
+                race.setCoins(player, racer, 0);
             }
             event.getDamager().remove();
         }
         if (event.getDamager() instanceof Firework) {
             event.setCancelled(true);
-        }
-        if (race.tag.type == RaceType.PIG && event.getCause() == DamageCause.ENTITY_EXPLOSION
-            && event.getEntity() instanceof Pig && event.getDamager() instanceof TNTPrimed) {
-            Pig pig = (Pig) event.getEntity();
-            Player player = null;
-            Racer racer = null;
-            for (Entity passenger : pig.getPassengers()) {
-                if (passenger instanceof Player) {
-                    player = (Player) passenger;
-                    racer = race.getRacer(player);
-                    if (racer != null) break;
-                }
-            }
-            if (racer == null) return;
-            pig.setHealth(0.0);
-            player.sendMessage(ChatColor.RED + "Mount destroyed");
-            racer.remountCooldown = 10;
         }
     }
 
@@ -143,7 +135,6 @@ public final class EventListener implements Listener {
     @EventHandler
     public void onPlayerItemDamage(PlayerItemDamageEvent event) {
         if (plugin.races.isRace(event.getPlayer().getLocation())) {
-            if (event.getItem().getType() == Material.CARROT_ON_A_STICK) return;
             event.setCancelled(true);
         }
     }
@@ -153,16 +144,9 @@ public final class EventListener implements Listener {
         Projectile proj = event.getEntity();
         Race race = plugin.races.at(proj.getLocation());
         if (race == null) return;
-        switch (race.getRaceType()) {
-        case BOAT:
-        case ICE_BOAT:
-            if (proj instanceof AbstractArrow) {
-                proj.getWorld().createExplosion(proj, 3.0f);
-                proj.remove();
-            }
-            break;
-        default:
-            break;
+        if (proj instanceof AbstractArrow) {
+            proj.getWorld().createExplosion(proj, 3.0f);
+            proj.remove();
         }
     }
 
@@ -203,83 +187,26 @@ public final class EventListener implements Listener {
             }
         }
         Race race = plugin.races.at(player.getLocation());
+        List<Component> lines = new ArrayList<>();
         if (race == null || !race.isRacing()) {
             if (plugin.save.event) {
-                eventSidebar(player, event);
+                eventSidebar(player, event, lines);
             }
-            return;
-        }
-        List<Component> lines = new ArrayList<>();
-        int i = 0;
-        List<Racer> racers = race.getRacers();
-        Racer theRacer = race.getRacer(player);
-        if (theRacer != null) {
-            if (!theRacer.finished) {
-                lines.add(Component.text("Lap " + (theRacer.lap + 1) + "/" + race.tag.laps, NamedTextColor.GREEN));
-            } else {
-                lines.add(Component.text(race.formatTime(theRacer.finishTime), NamedTextColor.GREEN));
-            }
-            if (race.tag.type == RaceType.PIG) {
-                if (player.getVehicle() instanceof Pig) {
-                    Pig pig = (Pig) player.getVehicle();
-                    double speed = pig.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getValue();
-                    lines.add(Component.text("Speed " + ChatColor.WHITE + (int) Math.round(speed * 100.0), NamedTextColor.GREEN));
-                }
-            }
-        }
-        String time = race.formatTimeShort(race.getTime());
-        String maxTime = race.tag.maxDuration > 0
-            ? race.formatTimeShort(race.tag.maxDuration * 1000L)
-            : "" + Unicode.INFINITY.character;
-        lines.add(Component.text().content("Time ").color(NamedTextColor.GREEN)
-                  .append(Component.text(time, NamedTextColor.YELLOW))
-                  .append(Component.text("/", NamedTextColor.WHITE))
-                  .append(Component.text(maxTime, NamedTextColor.RED))
-                  .build());
-        for (Racer racer : racers) {
-            Player racerPlayer = racer.getPlayer();
-            Component name = racerPlayer != null ? racerPlayer.displayName() : Component.text(racer.name);
-            int index = i++;
-            if (index > 8) break;
-            if (racer.finished) {
-                if (racer.rank < 3) {
-                    lines.add(Component.text()
-                              .append(Component.text("" + (index + 1) + " "))
-                              .append(name)
-                              .color(NamedTextColor.GOLD)
-                              .build());
-                } else {
-                    lines.add(Component.text()
-                              .append(Component.text("" + (index + 1) + " "))
-                              .append(name)
-                              .color(NamedTextColor.GOLD)
-                              .build());
-                }
-            } else {
-                lines.add(Component.text()
-                          .append(Component.text("" + (index + 1) + " "))
-                          .append(name)
-                          .color(NamedTextColor.WHITE)
-                          .build());
-            }
-        }
-        if (theRacer != null) {
-            lines.add(Component.text("You are #" + (theRacer.rank + 1) + "/" + race.tag.countAllRacers(), NamedTextColor.GREEN));
+        } else {
+            race.sidebar(player, lines);
         }
         if (!lines.isEmpty()) {
             event.add(plugin, Priority.HIGHEST, lines);
         }
     }
 
-    private void eventSidebar(Player player, PlayerSidebarEvent event) {
+    private void eventSidebar(Player player, PlayerSidebarEvent event, List<Component> lines) {
         List<UUID> uuids = plugin.save.rankScores();
-        List<Component> lines = new ArrayList<>();
-        lines.add(Component.text()
-                  .append(Mytems.GOLDEN_CUP.component)
-                  .append(Component.text("Grand Prix", NamedTextColor.GOLD))
-                  .append(Mytems.GOLDEN_CUP.component)
-                  .build());
-        for (int i = 0; i < 9; i += 1) {
+        lines.add(join(noSeparators(), Mytems.GOLDEN_CUP.component, text("Grand Prix", GOLD), Mytems.GOLDEN_CUP.component));
+        int playerScore = plugin.save.scores.getOrDefault(player.getUniqueId(), 0);
+        lines.add(text("Your Score ", WHITE)
+                  .append(text(playerScore, BLUE)));
+        for (int i = 0; i < 10; i += 1) {
             final int score;
             final Component name;
             if (i < uuids.size()) {
@@ -288,22 +215,17 @@ public final class EventListener implements Listener {
                 Player thePlayer = Bukkit.getPlayer(uuid);
                 name = thePlayer != null
                     ? thePlayer.displayName()
-                    : Component.text(PlayerCache.nameForUuid(uuid));
+                    : text(PlayerCache.nameForUuid(uuid));
             } else {
                 score = 0;
-                name = Component.text("???", NamedTextColor.DARK_GRAY);
+                name = text("???", DARK_GRAY);
             }
-            lines.add(Component.join(JoinConfiguration.separator(Component.space()), new Component[] {
+            lines.add(Component.join(separator(Component.space()), new Component[] {
                         Glyph.toComponent("" + (i + 1)),
-                        Component.text(score, (i < 3 ? NamedTextColor.GOLD : NamedTextColor.GRAY)),
+                        text(score, (i < 3 ? GOLD : GRAY)),
                         name,
                     }));
         }
-        Integer playerScoreObj = plugin.save.scores.get(player.getUniqueId());
-        int playerScore = playerScoreObj != null ? playerScoreObj : 0;
-        lines.add(Component.text("Your Score ", NamedTextColor.WHITE)
-                  .append(Component.text(playerScore, NamedTextColor.BLUE)));
-        event.add(plugin, Priority.HIGHEST, lines);
     }
 
     @EventHandler
@@ -316,14 +238,14 @@ public final class EventListener implements Listener {
     public void onEntityDismount(EntityDismountEvent event) {
         Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null || !race.isMounted() || !race.isRacing()) return;
-        if (!(event.getEntity() instanceof Player)) return;
-        Player player = (Player) event.getEntity();
+        if (!(event.getEntity() instanceof Player player)) return;
         Racer racer = race.getRacer(player);
         if (racer == null || !racer.racing || racer.finished) return;
         if (race.tag.type != RaceType.BOAT) {
             event.setCancelled(true);
         } else {
             racer.remountCooldown = 100;
+            race.setCoins(player, racer, 0);
             if (event.getDismounted().getType() == EntityType.BOAT) {
                 event.getDismounted().remove();
             }
@@ -447,14 +369,6 @@ public final class EventListener implements Listener {
     @EventHandler
     void onEntityPickupItem(EntityPickupItemEvent event) {
         Race race = plugin.races.at(event.getEntity().getLocation());
-        if (race == null) return;
-        event.setCancelled(true);
-    }
-
-    @EventHandler
-    void onEntitySpawn(EntitySpawnEvent event) {
-        if (event.getEntityType() != EntityType.DROPPED_ITEM) return;
-        Race race = plugin.races.at(event.getLocation());
         if (race == null) return;
         event.setCancelled(true);
     }

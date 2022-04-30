@@ -10,20 +10,22 @@ import org.bukkit.entity.Player;
  */
 @RequiredArgsConstructor
 public final class Racer implements Comparable<Racer> {
-    final UUID uuid;
-    final String name;
-    int checkpointIndex = 0;
-    int checkpointDistance = 0;
-    int checkpointDistanceIncreaseTicks = 0;
-    int lap = 0;
-    boolean finished = false;
-    long finishTime = 0;
-    int finishIndex;
-    int remountCooldown;
-    Vec3i startVector;
-    boolean racing = false;
-    int rank = 0;
-    long goodyCooldown = 0L;
+    protected final UUID uuid;
+    protected final String name;
+    protected int checkpointIndex = 0;
+    protected int checkpointDistance = 0;
+    protected int checkpointDistanceIncreaseTicks = 0;
+    protected int lap = 0;
+    protected boolean finished = false;
+    protected long finishTime = 0;
+    protected int finishIndex;
+    protected int remountCooldown;
+    protected Vec3i startVector;
+    protected boolean racing = false;
+    protected int rank = 0;
+    protected long goodyCooldown = 0L;
+    protected int coins = 0;
+    protected int invincibleTicks = 0;
 
     Racer(final Player player) {
         this.uuid = player.getUniqueId();
@@ -50,5 +52,9 @@ public final class Racer implements Comparable<Racer> {
         int cp = Integer.compare(other.checkpointIndex, checkpointIndex);
         if (cp != 0) return cp;
         return Integer.compare(checkpointDistance, other.checkpointDistance);
+    }
+
+    public boolean isInvincible() {
+        return invincibleTicks > 0;
     }
 }

@@ -2,6 +2,7 @@ package com.cavetale.race;
 
 import com.cavetale.core.editor.EditMenuAdapter;
 import com.cavetale.core.editor.EditMenuNode;
+import com.cavetale.mytems.Mytems;
 import com.cavetale.race.util.Rnd;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,7 +28,8 @@ public enum RaceType implements EditMenuAdapter {
     BOAT(() -> new ItemStack(Material.OAK_BOAT)),
     HORSE(() -> new ItemStack(Material.IRON_HORSE_ARMOR)),
     PIG(() -> new ItemStack(Material.CARROT_ON_A_STICK)),
-    ELYTRA(() -> new ItemStack(Material.ELYTRA));
+    ELYTRA(() -> new ItemStack(Material.ELYTRA)),
+    BROOM(Mytems.WITCH_BROOM::createIcon);
 
     public final Supplier<ItemStack> iconSupplier;
 
@@ -42,6 +44,10 @@ public enum RaceType implements EditMenuAdapter {
         default:
             return false;
         }
+    }
+
+    public boolean mountIsAlive() {
+        return isMounted() && this != ICE_BOAT && this != BOAT;
     }
 
     protected Vehicle spawnVehicle(Location location) {
@@ -103,7 +109,7 @@ public enum RaceType implements EditMenuAdapter {
         case BOAT:
             return List.of("Sailor");
         case PIG:
-            return List.of("PigRacer BaconRacer");
+            return List.of("PigRacer", "BaconRacer");
         default:
             return List.of("Falcon");
         }

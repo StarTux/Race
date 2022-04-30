@@ -1,5 +1,6 @@
 package com.cavetale.race;
 
+import com.cavetale.core.command.AbstractCommand;
 import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandContext;
 import com.cavetale.core.command.CommandNode;
@@ -10,56 +11,54 @@ import com.cavetale.core.editor.Editor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
-@RequiredArgsConstructor
-public final class RaceCommand implements TabExecutor {
-    private final RacePlugin plugin;
-    private CommandNode root = new CommandNode("race");
+public final class RaceCommand extends AbstractCommand<RacePlugin> {
+    protected RaceCommand(final RacePlugin plugin) {
+        super(plugin, "race");
+    }
 
-    void enable() {
-        root.addChild("list")
+    @Override
+    protected void onEnable() {
+        rootNode.addChild("list")
             .caller(this::list)
             .description("List all races");
-        root.addChild("info")
+        rootNode.addChild("info")
             .playerCaller(this::info)
             .description("Info about current race course");
-        root.addChild("create").arguments("<name>")
+        rootNode.addChild("create").arguments("<name>")
             .description("Create a new race")
             .playerCaller(this::create);
-        root.addChild("setspawn")
+        rootNode.addChild("setspawn")
             .caller(this::setspawn)
             .description("Set race spawn location");
-        root.addChild("edit")
+        rootNode.addChild("edit")
             .caller(this::edit)
             .description("Edit mode");
-        root.addChild("start")
+        rootNode.addChild("start")
             .caller(this::start)
             .description("Start a race");
-        root.addChild("stop")
+        rootNode.addChild("stop")
             .caller(this::stop)
             .description("Stop a race");
-        root.addChild("debug")
+        rootNode.addChild("debug")
             .caller(this::debug)
             .description("Debug command");
-        root.addChild("type")
+        rootNode.addChild("type")
             .caller(this::type)
             .description("Change race type");
-        root.addChild("laps")
+        rootNode.addChild("laps")
             .caller(this::laps)
             .description("Change lap number");
-        root.addChild("editor")
+        rootNode.addChild("editor")
             .playerCaller(this::editor);
-        CommandNode checkpointNode = root.addChild("checkpoint")
+        CommandNode checkpointNode = rootNode.addChild("checkpoint")
             .description("Checkpoint commands");
         checkpointNode.addChild("list")
             .description("List all checkpoints")
@@ -76,34 +75,41 @@ public final class RaceCommand implements TabExecutor {
         checkpointNode.addChild("swap")
             .description("Swap two checkpoints")
             .caller(this::checkpointSwap);
-        root.addChild("startvector")
+        rootNode.addChild("startvector")
             .completableList(Arrays.asList("clear", "add", "remove"))
             .caller(this::startvector);
-        root.addChild("goodies")
+        rootNode.addChild("goodies")
             .completableList(Arrays.asList("clear", "add", "remove"))
             .caller(this::goodies);
-        root.addChild("event").denyTabCompletion()
+        rootNode.addChild("coins")
+            .completableList(Arrays.asList("clear", "add", "remove"))
+            .caller(this::coins);
+        rootNode.addChild("event").denyTabCompletion()
             .description("Toggle event mode")
             .playerCaller(this::event);
-        root.addChild("eventrace").denyTabCompletion()
+        rootNode.addChild("eventrace").denyTabCompletion()
             .description("Make current race the event race")
             .playerCaller(this::eventRace);
-        root.addChild("setarea").denyTabCompletion()
+        rootNode.addChild("setarea").denyTabCompletion()
             .description("Set race area")
             .playerCaller(this::setArea);
-        root.addChild("mount").denyTabCompletion()
+        rootNode.addChild("mount").denyTabCompletion()
             .description("Summon a mount for yourself")
             .playerCaller(this::mount);
-        root.addChild("maxduration").arguments("<seconds>")
+        rootNode.addChild("maxduration").arguments("<seconds>")
             .playerCaller(this::maxDuration);
-        root.addChild("playerreset").denyTabCompletion()
+        rootNode.addChild("playerreset").denyTabCompletion()
             .playerCaller(this::playerReset);
-        root.addChild("teleport").arguments("<race>")
+        rootNode.addChild("teleport").arguments("<race>")
             .alias("tp")
             .completers(CommandArgCompleter.supplyList(() -> plugin.races.names()))
             .playerCaller(this::teleport);
+        rootNode.addChild("give").arguments("<player> <goody>")
+            .completers(CommandArgCompleter.NULL,
+                        CommandArgCompleter.enumLowerList(GoodyItem.class))
+            .senderCaller(this::give);
         // score
-        CommandNode scoreNode = root.addChild("score")
+        CommandNode scoreNode = rootNode.addChild("score")
             .description("Grand Prix Scores");
         scoreNode.addChild("reset").denyTabCompletion()
             .description("Reset all scores")
@@ -117,17 +123,7 @@ public final class RaceCommand implements TabExecutor {
         plugin.getCommand("race").setExecutor(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        return root.call(new CommandContext(sender, command, label, args), args);
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
-        return root.complete(new CommandContext(sender, command, label, args), args);
-    }
-
-    Cuboid requireWorldEditSelection(Player player) {
+    private Cuboid requireWorldEditSelection(Player player) {
         Cuboid cuboid = WorldEdit.getSelection(player);
         if (cuboid == null) {
             throw new CommandWarn("Make a WorldEdit selection first!");
@@ -135,7 +131,7 @@ public final class RaceCommand implements TabExecutor {
         return cuboid;
     }
 
-    Race requireRace(Player player) {
+    private Race requireRace(Player player) {
         Race race = plugin.races.at(player.getLocation());
         if (race == null) {
             throw new CommandWarn("You're not within a race area!");
@@ -143,7 +139,7 @@ public final class RaceCommand implements TabExecutor {
         return race;
     }
 
-    int requireInt(String arg) {
+    private int requireInt(String arg) {
         try {
             return Integer.parseInt(arg);
         } catch (NumberFormatException nfe) {
@@ -151,7 +147,7 @@ public final class RaceCommand implements TabExecutor {
         }
     }
 
-    boolean list(CommandContext context, CommandNode node, String[] args) {
+    private boolean list(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         List<Race> races = plugin.races.all();
         context.message("" + ChatColor.YELLOW + races.size() + " race(s)");
@@ -161,7 +157,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean info(Player player, String[] args) {
+    private boolean info(Player player, String[] args) {
         if (args.length != 0) return false;
         Race race = requireRace(player);
         if (race == null) throw new CommandWarn("There is no race here!");
@@ -199,7 +195,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean setspawn(CommandContext context, CommandNode node, String[] args) {
+    private boolean setspawn(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -211,7 +207,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean edit(CommandContext context, CommandNode node, String[] args) {
+    private boolean edit(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -225,7 +221,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean start(CommandContext context, CommandNode node, String[] args) {
+    private boolean start(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0 && args.length != 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -244,7 +240,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean checkpointList(CommandContext context, CommandNode node, String[] args) {
+    private boolean checkpointList(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -257,7 +253,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean checkpointAdd(CommandContext context, CommandNode node, String[] args) {
+    private boolean checkpointAdd(CommandContext context, CommandNode node, String[] args) {
         if (args.length > 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -276,7 +272,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean checkpointInfo(CommandContext context, CommandNode node, String[] args) {
+    private boolean checkpointInfo(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -290,7 +286,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean checkpointSwap(CommandContext context, CommandNode node, String[] args) {
+    private boolean checkpointSwap(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 2) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -313,7 +309,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean checkpointRemove(CommandContext context, CommandNode node, String[] args) {
+    private boolean checkpointRemove(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -329,7 +325,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean type(CommandContext context, CommandNode node, String[] args) {
+    private boolean type(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -343,7 +339,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean laps(CommandContext context, CommandNode node, String[] args) {
+    private boolean laps(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -362,7 +358,7 @@ public final class RaceCommand implements TabExecutor {
             });
     }
 
-    boolean debug(CommandContext context, CommandNode node, String[] args) {
+    private boolean debug(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -370,7 +366,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean stop(CommandContext context, CommandNode node, String[] args) {
+    private boolean stop(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
@@ -380,7 +376,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean startvector(CommandContext context, CommandNode node, String[] args) {
+    private boolean startvector(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 1) return false;
         Player player = context.requirePlayer();
         switch (args[0]) {
@@ -424,13 +420,13 @@ public final class RaceCommand implements TabExecutor {
         }
     }
 
-    boolean goodies(CommandContext context, CommandNode node, String[] args) {
+    private boolean goodies(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 1) return false;
         Player player = context.requirePlayer();
         switch (args[0]) {
         case "add": {
             Race race = requireRace(player);
-            Vec3i vec = Vec3i.of(player.getLocation());
+            Vec3i vec = requireWorldEditSelection(player).getMin();
             if (race.tag.goodies.contains(vec)) {
                 throw new CommandWarn("Goodie already exists: " + vec);
             }
@@ -441,7 +437,7 @@ public final class RaceCommand implements TabExecutor {
         }
         case "remove": {
             Race race = requireRace(player);
-            Vec3i vec = Vec3i.of(player.getLocation());
+            Vec3i vec = requireWorldEditSelection(player).getMin();
             if (!race.tag.goodies.contains(vec)) {
                 throw new CommandWarn("No goodie here: " + vec);
             }
@@ -462,7 +458,45 @@ public final class RaceCommand implements TabExecutor {
         }
     }
 
-    boolean event(Player player, String[] args) {
+    private boolean coins(CommandContext context, CommandNode node, String[] args) {
+        if (args.length != 1) return false;
+        Player player = context.requirePlayer();
+        switch (args[0]) {
+        case "add": {
+            Race race = requireRace(player);
+            Vec3i vec = requireWorldEditSelection(player).getMin();
+            if (race.tag.coins.contains(vec)) {
+                throw new CommandWarn("Coin already exists: " + vec);
+            }
+            race.tag.coins.add(vec);
+            race.save();
+            player.sendMessage(ChatColor.YELLOW + "Coin added: " + vec);
+            return true;
+        }
+        case "remove": {
+            Race race = requireRace(player);
+            Vec3i vec = requireWorldEditSelection(player).getMin();
+            if (!race.tag.coins.contains(vec)) {
+                throw new CommandWarn("No coin here: " + vec);
+            }
+            race.tag.coins.remove(vec);
+            race.save();
+            player.sendMessage(ChatColor.YELLOW + "Coin removed: " + vec);
+            return true;
+        }
+        case "clear": {
+            Race race = requireRace(player);
+            int count = race.tag.coins.size();
+            race.tag.coins.clear();
+            if (count > 0) race.save();
+            player.sendMessage(ChatColor.YELLOW + "Coins cleared: " + count);
+            return true;
+        }
+        default: return false;
+        }
+    }
+
+    private boolean event(Player player, String[] args) {
         if (args.length > 1) return false;
         if (args.length == 1) {
             try {
@@ -480,7 +514,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean eventRace(Player player, String[] args) {
+    private boolean eventRace(Player player, String[] args) {
         if (args.length == 1 && args[0].equals("reset")) {
             plugin.save.eventRace = null;
             plugin.save();
@@ -500,7 +534,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean setArea(Player player, String[] args) {
+    private boolean setArea(Player player, String[] args) {
         Race race = requireRace(player);
         Cuboid cuboid = requireWorldEditSelection(player);
         race.tag.area = cuboid;
@@ -509,7 +543,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean mount(Player player, String[] args) {
+    private boolean mount(Player player, String[] args) {
         Race race = requireRace(player);
         if (!race.tag.type.isMounted()) {
             throw new CommandWarn("Not mounted: " + race.tag.type);
@@ -519,7 +553,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean maxDuration(Player player, String[] args) {
+    private boolean maxDuration(Player player, String[] args) {
         if (args.length != 1) return false;
         Race race = requireRace(player);
         race.tag.setMaxDuration(requireInt(args[0]));
@@ -529,14 +563,14 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean scoreReset(CommandSender sender, String[] args) {
+    private boolean scoreReset(CommandSender sender, String[] args) {
         plugin.save.scores.clear();
         plugin.save();
         sender.sendMessage(Component.text("All scores were reset!", YELLOW));
         return true;
     }
 
-    boolean scorePedestal(CommandSender sender, String[] args) {
+    private boolean scorePedestal(CommandSender sender, String[] args) {
         plugin.save.eventRace = null;
         plugin.save();
         sender.sendMessage(Component.text("Putting winners on pedestals...", YELLOW));
@@ -544,7 +578,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean scoreReward(CommandSender sender, String[] args) {
+    private boolean scoreReward(CommandSender sender, String[] args) {
         plugin.save.eventRace = null;
         plugin.save();
         sender.sendMessage(Component.text("Giving winners rewards...", YELLOW));
@@ -552,7 +586,7 @@ public final class RaceCommand implements TabExecutor {
         return true;
     }
 
-    boolean playerReset(CommandSender sender, String[] args) {
+    private boolean playerReset(CommandSender sender, String[] args) {
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.setWalkSpeed(0.2f);
         }
@@ -568,6 +602,21 @@ public final class RaceCommand implements TabExecutor {
         }
         player.teleport(race.getSpawnLocation());
         player.sendMessage(Component.text("Teleported to race " + race.name));
+        return true;
+    }
+
+    private boolean give(CommandSender sender, String[] args) {
+        if (args.length != 2) return false;
+        Player target = Bukkit.getPlayerExact(args[0]);
+        if (target == null) throw new CommandWarn("Player not found: " + args[0]);
+        GoodyItem goody;
+        try {
+            goody = GoodyItem.valueOf(args[1].toUpperCase());
+        } catch (IllegalArgumentException iae) {
+            throw new CommandWarn("Goody not found: " + args[1]);
+        }
+        target.getInventory().addItem(goody.createItemStack());
+        sender.sendMessage(text("Gave " + goody + " to " + target.getName(), YELLOW));
         return true;
     }
 }

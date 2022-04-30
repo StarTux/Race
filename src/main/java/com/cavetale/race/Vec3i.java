@@ -1,12 +1,23 @@
 package com.cavetale.race;
 
+import com.cavetale.core.editor.EditMenuAdapter;
+import com.cavetale.core.editor.EditMenuButton;
+import com.cavetale.core.editor.EditMenuNode;
+import java.util.List;
 import lombok.Value;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.inventory.ItemStack;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 @Value
-public final class Vec3i {
+public final class Vec3i implements EditMenuAdapter {
     public static final Vec3i ZERO = new Vec3i(0, 0, 0);
     public static final Vec3i ONE = new Vec3i(1, 1, 1);
     public final int x;
@@ -61,5 +72,27 @@ public final class Vec3i {
 
     public boolean contains(Location loc) {
         return x == loc.getBlockX() && y == loc.getBlockY() && z == loc.getBlockZ();
+    }
+
+    @Override
+    public List<EditMenuButton> getEditMenuButtons(EditMenuNode node) {
+        return List.of(new EditMenuButton[] {
+                new EditMenuButton() {
+                    @Override public ItemStack getMenuIcon() {
+                        return new ItemStack(Material.ENDER_PEARL);
+                    }
+
+                    @Override public List<Component> getTooltip() {
+                        return List.of(text("Teleport: " + toString(), GREEN));
+                    }
+
+                    @Override public void onClick(Player player, ClickType click) {
+                        if (click.isLeftClick()) {
+                            player.teleport(toLocation(player.getWorld()));
+                            player.sendMessage(text("Teleported to location: " + toString(), GREEN));
+                        }
+                    }
+                },
+            });
     }
 }

@@ -1,9 +1,10 @@
 package com.cavetale.race;
 
+import com.cavetale.core.font.Unicode;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
 import com.cavetale.race.struct.Vec2i;
-import com.cavetale.race.util.Items;
+import com.cavetale.race.util.Rnd;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -13,11 +14,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -29,35 +29,38 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
-import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.Attributable;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
-import org.bukkit.entity.EnderCrystal;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.TNTPrimed;
 import org.bukkit.entity.Vehicle;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.CrossbowMeta;
-import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.potion.PotionData;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionType;
 import org.bukkit.util.BlockIterator;
+import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static net.kyori.adventure.title.Title.Times.times;
+import static org.bukkit.attribute.Attribute.*;
 
 @RequiredArgsConstructor
 public final class Race {
     private final RacePlugin plugin;
-    final String name;
-    final Tag tag;
-    Map<Vec3i, Goody> goodies = new HashMap<>();
-    final Random random = new Random();
+    protected final String name;
+    protected final Tag tag;
+    protected Map<Vec3i, Goody> goodies = new HashMap<>();
+    protected Map<Vec3i, Goody> coins = new HashMap<>();
+    public static final int MAX_COINS = 20;
 
     public void onDisable() {
         for (Racer racer : tag.racers) {
@@ -124,6 +127,9 @@ public final class Race {
                 player.setFlying(false);
                 player.setAllowFlight(false);
                 player.setFlySpeed(0.1f);
+                if (tag.type == RaceType.ELYTRA) {
+                    player.getInventory().setChestplate(new ItemStack(Material.ELYTRA));
+                }
             }
             return;
         }
@@ -136,16 +142,16 @@ public final class Race {
             case 2:
             case 1:
                 for (Player player : getPresentPlayers()) {
-                    player.showTitle(Title.title(Component.text("" + secondsLeft, NamedTextColor.GREEN),
-                                                 Component.text("Get Ready", NamedTextColor.GREEN),
+                    player.showTitle(Title.title(text("" + secondsLeft, GREEN),
+                                                 text("Get Ready", GREEN),
                                                  times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.MASTER, 0.2f, 2.0f);
                 }
                 break;
             case 0:
                 for (Player player : getPresentPlayers()) {
-                    player.showTitle(Title.title(Component.text("GO!", NamedTextColor.GREEN, TextDecoration.ITALIC),
-                                                 Component.text("Good Luck", NamedTextColor.GREEN),
+                    player.showTitle(Title.title(text("GO!", GREEN, TextDecoration.ITALIC),
+                                                 text("Good Luck", GREEN),
                                                  times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
                     player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 0.2f, 2.0f);
                 }
@@ -166,7 +172,7 @@ public final class Race {
         }
     }
 
-    void passThroughBlock(Player player, Racer racer, Block block) {
+    private void passThroughBlock(Player player, Racer racer, Block block) {
         if (racer.finished) return;
         Vec3i vec = Vec3i.of(block);
         Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
@@ -178,113 +184,124 @@ public final class Race {
             }
         }
         long now = System.currentTimeMillis();
-        if (racer.goodyCooldown > now) return;
         for (int y = -1; y <= 1; y += 1) {
             for (int z = -1; z <= 1; z += 1) {
                 for (int x = -1; x <= 1; x += 1) {
                     Vec3i vec2 = vec.add(x, y, z);
-                    Goody goody = goodies.get(vec2);
-                    if (goody == null || goody.entity == null || goody.cooldown > 0) continue;
-                    Location loc = goody.entity.getLocation();
-                    goody.entity.remove();
-                    goody.entity = null;
-                    goody.cooldown = 200;
-                    Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
-                            e.setPersistent(false);
-                            e.setFireworkMeta(Fireworks.simpleFireworkMeta());
-                        });
-                    firework.detonate();
-                    giveGoody(player, racer);
-                    loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.8f, 2.0f);
-                    racer.goodyCooldown = now + 3000L;
-                    return;
+                    if (racer.goodyCooldown < now && GoodyItem.count(player.getInventory()) < 2) {
+                        onTouchGoody(player, racer, vec2);
+                    }
+                    if (racer.coins < MAX_COINS) {
+                        onTouchCoin(player, racer, vec2);
+                    }
                 }
             }
         }
     }
 
-    void giveGoody(Player player, Racer racer) {
-        List<GoodyDrop> pool = new ArrayList<>();
-        switch (tag.type) {
-        case BOAT: {
-            if (tag.rareItemsAvailable > 0 && racer.rank > 3 && random.nextDouble() < 0.05) {
-                tag.rareItemsAvailable -= 1;
-                ItemStack itemStack = Items.lightningRod();
-                player.getInventory().addItem(itemStack);
-                return;
+    private void onTouchGoody(Player player, Racer racer, Vec3i vector) {
+        Goody goody = goodies.get(vector);
+        if (goody == null || goody.entity == null || goody.cooldown > 0) return;
+        Location loc = goody.entity.getLocation();
+        goody.entity.remove();
+        goody.entity = null;
+        goody.cooldown = 40;
+        Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
+                e.setPersistent(false);
+                e.setFireworkMeta(Fireworks.simpleFireworkMeta());
+            });
+        firework.detonate();
+        giveGoody(player, racer);
+        loc.getWorld().playSound(loc, Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.8f, 2.0f);
+        racer.goodyCooldown = System.currentTimeMillis() + 3000L;
+    }
+
+    private boolean giveGoody(Player player, Racer racer) {
+        List<GoodyItem> options = new ArrayList<>();
+        List<Double> chances = new ArrayList<>();
+        double totalChance = 0.0;
+        for (GoodyItem it : GoodyItem.values()) {
+            if (it.category == GoodyItem.Category.UNAVAILABLE) {
+                continue;
             }
-            ItemStack itemStack = new ItemStack(Material.CROSSBOW);
-            CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
-            meta.addChargedProjectile(new ItemStack(Material.SPECTRAL_ARROW));
-            itemStack.setItemMeta(meta);
-            player.getInventory().addItem(itemStack);
-            break;
-        }
-        case ICE_BOAT: {
-            ItemStack itemStack = new ItemStack(Material.CROSSBOW);
-            CrossbowMeta meta = (CrossbowMeta) itemStack.getItemMeta();
-            meta.addChargedProjectile(new ItemStack(Material.SPECTRAL_ARROW));
-            itemStack.setItemMeta(meta);
-            player.getInventory().addItem(itemStack);
-            break;
-        }
-        case HORSE:
-            putHorseGoodies(pool, player, racer);
-            break;
-        case PIG: {
-            if (!player.getInventory().contains(Material.CARROT_ON_A_STICK, 2)) {
-                pool.add(new GoodyDrop(10, new ItemStack(Material.CARROT_ON_A_STICK)));
+            if (it.category == GoodyItem.Category.LIVING && !tag.type.mountIsAlive()) {
+                continue;
             }
-            putHorseGoodies(pool, player, racer);
-            break;
+            if (it.category == GoodyItem.Category.RARE && tag.rareItemsAvailable <= 0) {
+                continue;
+            }
+            double chance = it.goodyPredicate.chance(this, player, racer);
+            if (chance < 0.01) continue;
+            options.add(it);
+            chances.add(chance);
+            totalChance += chance;
         }
-        default:
-            break;
-        }
-        if (tag.rareItemsAvailable <= 0) pool.removeIf(GoodyDrop::isRare);
-        if (pool.isEmpty()) return;
-        double total = 0;
-        for (GoodyDrop drop : pool) total += drop.weight;
-        double roll = random.nextDouble() * total;
-        GoodyDrop theDrop = null;
-        for (GoodyDrop drop : pool) {
-            roll -= drop.weight;
-            if (roll < 0.0) {
-                theDrop = drop;
+        if (options.isEmpty()) return false;
+        GoodyItem choice = options.get(options.size() - 1);
+        double roll = Rnd.nextDouble() * totalChance;
+        for (int i = 0; i < options.size(); i += 1) {
+            roll -= chances.get(i);
+            if (roll <= 0) {
+                choice = options.get(i);
                 break;
             }
         }
-        if (theDrop == null) theDrop = pool.get(pool.size() - 1);
-        if (theDrop.rare) {
+        if (choice.category == GoodyItem.Category.RARE) {
             tag.rareItemsAvailable -= 1;
         }
-        player.getInventory().addItem(theDrop.item.clone());
+        player.getInventory().addItem(choice.createItemStack());
+        player.sendMessage(choice.lore.get(0));
+        return true;
     }
 
-    void putHorseGoodies(List<GoodyDrop> pool, Player player, Racer racer) {
-        int count = tag.countRacers();
-        int rank = racer.rank;
-        if (rank <= count / 4) {
-            pool.add(new GoodyDrop(0.5, Items.potionItem(Material.LINGERING_POTION, PotionType.SLOWNESS)));
-            pool.add(new GoodyDrop(0.5, Items.potionItem(Material.LINGERING_POTION, PotionType.POISON)));
-            pool.add(new GoodyDrop(0.5, Items.potionItem(Material.LINGERING_POTION, PotionType.INSTANT_DAMAGE)));
-            pool.add(new GoodyDrop(2, Items.label(Material.TNT,
-                                                  Component.text("TNT Trap", NamedTextColor.DARK_RED))));
-            pool.add(new GoodyDrop(2, Items.label(Items.potionItem(Material.POTION, PotionType.INSTANT_HEAL),
-                                                  Component.text("Health Boost", NamedTextColor.AQUA))));
-        } else {
-            pool.add(new GoodyDrop(0.05, Items.lightningRod(), true));
+    private void onTouchCoin(Player player, Racer racer, Vec3i vector) {
+        Goody coin = coins.get(vector);
+        if (coin == null || coin.entity == null || coin.cooldown > 0) return;
+        Location loc = coin.entity.getLocation();
+        coin.entity.remove();
+        coin.entity = null;
+        coin.cooldown = 20 * 60;
+        loc.getWorld().playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 1.0f, 2.0f);
+        setCoins(player, racer, racer.coins + 1);
+        Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
+                e.setPersistent(false);
+                e.setFireworkMeta(Fireworks.simpleFireworkMeta());
+            });
+        firework.detonate();
+    }
+
+    protected void setCoins(Player player, Racer racer, int value) {
+        racer.coins = value;
+        updateVehicleSpeed(player, racer, player.getVehicle());
+    }
+
+    private static final UUID SPEED_BONUS_UUID = UUID.fromString("5209c14a-7d9c-41e9-858a-2b6da987486a");
+
+    protected void updateVehicleSpeed(Player player, Racer racer, Entity vehicle) {
+        if (vehicle == null) return;
+        if (vehicle instanceof Attributable attributable) {
+            AttributeInstance inst = attributable.getAttribute(GENERIC_MOVEMENT_SPEED);
+            if (inst == null) return;
+            for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
+                if (SPEED_BONUS_UUID.equals(modifier.getUniqueId())) {
+                    inst.removeModifier(modifier);
+                }
+            }
+            if (racer.coins >= 0) {
+                double factor = 0.5 * ((double) racer.coins / (double) MAX_COINS);
+                inst.addModifier(new AttributeModifier(SPEED_BONUS_UUID,
+                                                       "race_coins",
+                                                       factor,
+                                                       AttributeModifier.Operation.MULTIPLY_SCALAR_1));
+            }
         }
-        pool.add(new GoodyDrop(2, Items.label(Items.potionItem(Material.POTION, PotionType.SPEED),
-                                              Component.text("Speed Boost", NamedTextColor.GREEN))));
-        pool.add(new GoodyDrop(1, Items.blunderbuss()));
     }
 
     private int getEventScore(int finishIndex) {
         return Math.max(1, tag.racerCount - finishIndex);
     }
 
-    void progressCheckpoint(Player player, Racer racer) {
+    private void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.2f, 2.0f);
         racer.checkpointDistanceIncreaseTicks = 0;
@@ -301,18 +318,18 @@ public final class Race {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                     int score = getEventScore(racer.finishIndex);
                     int totalScore = plugin.save.scores.compute(player.getUniqueId(), (u, i) -> (i != null ? i : 0) + score);
-                    player.sendMessage(Component.text().color(NamedTextColor.GOLD)
-                                       .append(Component.text("You earned "))
-                                       .append(Component.text(score, NamedTextColor.BLUE))
-                                       .append(Component.text(" points for a total of "))
-                                       .append(Component.text(totalScore, NamedTextColor.BLUE)));
+                    player.sendMessage(text().color(GOLD)
+                                       .append(text("You earned "))
+                                       .append(text(score, BLUE))
+                                       .append(text(" points for a total of "))
+                                       .append(text(totalScore, BLUE)));
                     if (racer.finishIndex == 0) {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " "
                                                + String.join(" ", tag.type.getWinnerTitles()));
                     }
                 }
-                player.showTitle(Title.title(Component.text("#" + (racer.finishIndex + 1), NamedTextColor.GREEN),
-                                             Component.text(formatTime(racer.finishTime), NamedTextColor.GREEN),
+                player.showTitle(Title.title(text("#" + (racer.finishIndex + 1), GREEN),
+                                             text(formatTime(racer.finishTime), GREEN),
                                              times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(500))));
                 for (Player target : getPresentPlayers()) {
                     target.sendMessage(ChatColor.GREEN + player.getName()
@@ -325,8 +342,8 @@ public final class Race {
                 if (player.getVehicle() != null) player.getVehicle().remove();
                 clearInventory(player);
             } else {
-                player.showTitle(Title.title(Component.text((racer.lap + 1) + "/" + tag.laps, NamedTextColor.GREEN),
-                                             Component.text("Lap " + (racer.lap + 1), NamedTextColor.GREEN),
+                player.showTitle(Title.title(text((racer.lap + 1) + "/" + tag.laps, GREEN),
+                                             text("Lap " + (racer.lap + 1), GREEN),
                                              times(Duration.ofMillis(500),
                                                    Duration.ofMillis(1000),
                                                    Duration.ofMillis(0))));
@@ -337,16 +354,16 @@ public final class Race {
         }
     }
 
-    void tickRace(int ticks) {
+    private void tickRace(int ticks) {
         if (tag.maxDuration > 0) {
             if (getTime() > tag.maxDuration * 1000L) {
                 for (Player player : getPresentPlayers()) {
-                    player.showTitle(Title.title(Component.text("Timeout", NamedTextColor.RED),
-                                                 Component.text("The race is over", NamedTextColor.RED),
+                    player.showTitle(Title.title(text("Timeout", RED),
+                                                 text("The race is over", RED),
                                                  times(Duration.ZERO,
                                                        Duration.ofSeconds(2),
                                                        Duration.ofSeconds(1))));
-                    player.sendMessage(Component.text("Timeout! The race is over", NamedTextColor.RED));
+                    player.sendMessage(text("Timeout! The race is over", RED));
                 }
                 stopRace();
             }
@@ -380,60 +397,51 @@ public final class Race {
                     racer.checkpointDistanceIncreaseTicks = 0;
                 }
                 if (racer.checkpointDistanceIncreaseTicks >= 10 && (tag.phaseTicks % 20) == 0) {
-                    player.showTitle(Title.title(Component.text("Reverse", NamedTextColor.RED),
-                                                 Component.text("Turn Around", NamedTextColor.RED),
+                    player.showTitle(Title.title(text("Reverse", RED),
+                                                 text("Turn Around", RED),
                                                  times(Duration.ZERO, Duration.ofMillis(750), Duration.ZERO)));
                 }
                 if ((ticks % 20) == 0) {
                     List<Vec3i> vecs = cp.enumerate();
-                    Location center = vecs.get(random.nextInt(vecs.size())).toLocation(getWorld()).add(0.0, 0.5, 0.0);
+                    Location center = Rnd.pick(vecs).toLocation(getWorld()).add(0.0, 0.5, 0.0);
                     player.spawnParticle(Particle.FIREWORKS_SPARK, center, 20, 0.0, 0.0, 0.0, 0.2);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+            }
+            if (tag.type == RaceType.ELYTRA) {
+                if (player.isGliding()) {
+                    getWorld().spawnParticle(Particle.WAX_OFF, player.getLocation(), 1, 0.0, 0.0, 0.0, 0.0);
+                }
+            }
+            if (tag.type.isMounted()) {
+                if (player.getVehicle() == null) {
+                    if (racer.remountCooldown > 0) {
+                        racer.remountCooldown -= 1;
+                    } else {
+                        Vehicle vehicle = tag.type.spawnVehicle(player.getLocation());
+                        if (vehicle != null) {
+                            vehicle.addPassenger(player);
+                            updateVehicleSpeed(player, racer, vehicle);
+                        }
+                    }
+                }
+            }
+            if (racer.isInvincible()) {
+                racer.invincibleTicks -= 1;
+                if (racer.invincibleTicks <= 0) {
+                    player.removePotionEffect(PotionEffectType.GLOWING);
+                }
             }
         }
         Collections.sort(tag.racers);
         for (int i = 0; i < tag.racers.size(); i += 1) {
             tag.racers.get(i).rank = i;
         }
-        if (tag.type.isMounted()) {
-            for (Racer racer : tag.racers) {
-                Player player = racer.getPlayer();
-                if (player == null) continue;
-                if (racer.finished) continue;
-                if (player.getVehicle() == null) {
-                    if (racer.remountCooldown > 0) {
-                        racer.remountCooldown -= 1;
-                    } else {
-                        Vehicle vehicle = tag.type.spawnVehicle(player.getLocation());
-                        if (vehicle != null) vehicle.addPassenger(player);
-                    }
-                }
-                if (tag.type == RaceType.PIG) {
-                    if (!player.getInventory().contains(Material.CARROT_ON_A_STICK)) {
-                        player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
-                    }
-                    player.getInventory().remove(Material.FISHING_ROD);
-                }
-            }
-        }
-        if (tag.type == RaceType.ELYTRA) {
-            for (Racer racer : tag.racers) {
-                Player player = racer.getPlayer();
-                if (player == null || racer.finished || !racer.racing) continue;
-                ItemStack elytra = player.getInventory().getChestplate();
-                if (elytra == null || elytra.getType() != Material.ELYTRA) {
-                    player.getInventory().setChestplate(new ItemStack(Material.ELYTRA));
-                } else if (player.isGliding()) {
-                    getWorld().spawnParticle(Particle.WAX_OFF, player.getLocation(), 1, 0.0, 0.0, 0.0, 0.0);
-                }
-            }
-        }
         updateGoodies();
     }
 
-    void setupCheckpoint(Racer racer, Cuboid checkpoint) {
+    private void setupCheckpoint(Racer racer, Cuboid checkpoint) {
         racer.checkpointIndex = tag.checkpoints.indexOf(checkpoint);
         Vec3i center = checkpoint.getCenter();
         Vec3i pos = Vec3i.of(racer.getPlayer().getLocation().getBlock());
@@ -553,18 +561,17 @@ public final class Race {
             tag.racers.add(racer);
             if (startVectorIndex >= tag.startVectors.size()) startVectorIndex = 0;
             racer.startVector = tag.startVectors.get(startVectorIndex++);
-            player.sendMessage(Component.text("You joined the race!", NamedTextColor.GREEN));
-            player.sendActionBar(Component.text("You joined the race!", NamedTextColor.GREEN));
+            player.sendMessage(text("You joined the race!", GREEN));
+            player.sendActionBar(text("You joined the race!", GREEN));
             clearInventory(player);
-            player.getInventory().addItem(Items.label(Material.COMPASS,
-                                                      Component.text("Points at next Checkpoint", NamedTextColor.YELLOW)));
+            player.getInventory().addItem(GoodyItem.WAYPOINT.createItemStack());
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(getStartLocation(racer));
             player.setAllowFlight(true);
             player.setFlying(true);
             player.setFlySpeed(0.0f);
-            player.showTitle(Title.title(Component.text("Race", NamedTextColor.GREEN, TextDecoration.ITALIC),
-                                         Component.text("The Race Begins", NamedTextColor.GREEN),
+            player.showTitle(Title.title(text("Race", GREEN, TextDecoration.ITALIC),
+                                         text("The Race Begins", GREEN),
                                          times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(1))));
             player.setWalkSpeed(0f);
             if (tag.type == RaceType.STRIDER) {
@@ -573,8 +580,7 @@ public final class Race {
             if (tag.type == RaceType.PIG) {
                 player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
             }
-            player.getInventory().setItem(8, Items.label(Material.ENDER_PEARL,
-                                                         Component.text("Return to Checkpoint", NamedTextColor.LIGHT_PURPLE)));
+            player.getInventory().setItem(8, GoodyItem.RETURN.createItemStack());
             if (tag.type == RaceType.HORSE) {
                 player.getInventory().setHelmet(Mytems.COWBOY_HAT.createItemStack());
             } else if (tag.type == RaceType.BOAT || tag.type == RaceType.ICE_BOAT) {
@@ -629,7 +635,7 @@ public final class Race {
         return null;
     }
 
-    void stopRace() {
+    public void stopRace() {
         for (Racer racer : tag.racers) {
             Player player = racer.getPlayer();
             if (player != null) {
@@ -647,92 +653,24 @@ public final class Race {
         clearGoodies();
     }
 
-    Cuboid getLastCheckpoint(Racer racer) {
+    public Cuboid getLastCheckpoint(Racer racer) {
         if (racer.checkpointIndex == 0) return tag.spawnArea;
         if (racer.checkpointIndex > tag.checkpoints.size()) return tag.spawnArea;
         return tag.checkpoints.get(racer.checkpointIndex - 1);
     }
 
-    void onUseItem(Player player, ItemStack item, PlayerInteractEvent event) {
+    protected void onUseItem(Player player, ItemStack item, PlayerInteractEvent event) {
         if (tag.phase != Phase.RACE) return;
         Racer racer = getRacer(player);
         if (racer == null) return;
-        if (item.getType() == Material.ENDER_PEARL) {
+        GoodyItem goodyItem = GoodyItem.of(item);
+        if (goodyItem == null) return;
+        if (goodyItem.goodyConsumer.use(this, player, racer, item)) {
             event.setCancelled(true);
-            teleportToLastCheckpoint(player);
-            return;
-        }
-        if (item.getType() == Material.TNT) {
-            item.subtract(1);
-            player.getWorld().spawn(player.getEyeLocation(), TNTPrimed.class, e -> {
-                    e.setFuseTicks(80);
-                });
-        }
-        if (item.getType() == Material.LIGHTNING_ROD) {
-            item.subtract(1);
-            int count = 0;
-            for (Racer otherRacer : tag.racers) {
-                if (racer == otherRacer) continue;
-                if (racer.rank <= otherRacer.rank) continue;
-                Player otherPlayer = otherRacer.getPlayer();
-                if (otherPlayer != null) {
-                    otherPlayer.getWorld().strikeLightningEffect(otherPlayer.getLocation());
-                    Entity vehicle = otherPlayer.getVehicle();
-                    if (vehicle != null) {
-                        if (vehicle instanceof LivingEntity) {
-                            ((LivingEntity) vehicle).damage(15.0);
-                        } else {
-                            vehicle.remove();
-                        }
-                    }
-                    otherRacer.remountCooldown = 60;
-                    otherPlayer.sendMessage(Component.text("Struck by lightning!", NamedTextColor.GOLD));
-                    count += 1;
-                }
-            }
-            player.sendMessage(Component.text("Struck " + count + " players ahead of you with lightning!", NamedTextColor.GOLD));
-        }
-        if (item.getType() == Material.POTION) {
-            PotionMeta meta = (PotionMeta) item.getItemMeta();
-            PotionData potionData = meta.getBasePotionData();
-            if (potionData != null && potionData.getType() == PotionType.SPEED) {
-                if (player.getVehicle() instanceof LivingEntity) {
-                    event.setCancelled(true);
-                    item.subtract(1);
-                    double strength = (double) racer.rank / (double) tag.countRacers();
-                    LivingEntity target = (LivingEntity) player.getVehicle();
-                    target.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,
-                                                            Math.max(100, (int) (600.0 * strength)),
-                                                            2, true, true, true));
-                    player.sendMessage(Component.text("Your ride got a speed boost!",
-                                                      NamedTextColor.GREEN, TextDecoration.ITALIC));
-                    Location loc = player.getLocation();
-                    Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());
-                    player.playSound(loc, Sound.ENTITY_PLAYER_SPLASH_HIGH_SPEED, 2.0f, 2.0f);
-                    player.spawnParticle(Particle.SPELL_MOB, locAhead, 32, 0.5, 0.5, 0.5, 1.0);
-                    return;
-                }
-            }
-            if (potionData != null && potionData.getType() == PotionType.INSTANT_HEAL) {
-                if (player.getVehicle() instanceof LivingEntity) {
-                    event.setCancelled(true);
-                    item.subtract(1);
-                    player.sendMessage(Component.text("Your ride was healed!",
-                                                      NamedTextColor.AQUA, TextDecoration.ITALIC));
-                    LivingEntity target = (LivingEntity) player.getVehicle();
-                    target.setHealth(target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-                    target.removePotionEffect(PotionEffectType.POISON);
-                    Location loc = player.getLocation();
-                    Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());
-                    player.playSound(loc, Sound.ENTITY_PLAYER_SPLASH_HIGH_SPEED, 2.0f, 2.0f);
-                    player.spawnParticle(Particle.HEART, locAhead, 8, 0.5, 0.5, 0.5, 0.0);
-                    return;
-                }
-            }
         }
     }
 
-    void teleportToLastCheckpoint(Player player) {
+    public void teleportToLastCheckpoint(Player player) {
         Racer racer = getRacer(player);
         if (racer == null) return;
         Cuboid checkpoint = getLastCheckpoint(racer);
@@ -751,11 +689,11 @@ public final class Race {
             player.getVehicle().remove();
         }
         player.teleport(loc);
-        player.sendActionBar(Component.text("Returned to last checkpoint!", NamedTextColor.LIGHT_PURPLE));
+        player.sendActionBar(text("Returned to last checkpoint!", LIGHT_PURPLE));
         player.playSound(loc, Sound.ENTITY_ENDER_PEARL_THROW, SoundCategory.MASTER, 0.5f, 1.0f);
     }
 
-    void onDamage(Player player, EntityDamageEvent event) {
+    protected void onDamage(Player player, EntityDamageEvent event) {
         event.setCancelled(true);
         Racer racer = getRacer(player);
         if (racer == null) return;
@@ -798,7 +736,7 @@ public final class Race {
         }
     }
 
-    void updateGoodies() {
+    protected void updateGoodies() {
         for (Vec3i vector : tag.goodies) {
             Goody goody = goodies.computeIfAbsent(vector, v -> new Goody(v));
             if (goody.cooldown > 0) {
@@ -809,15 +747,48 @@ public final class Race {
                 goody.entity = null;
                 Location location = goody.where.toLocation(getWorld());
                 if (!location.isChunkLoaded()) continue;
-                goody.entity = location.getWorld().spawn(location, EnderCrystal.class, e -> {
+                goody.entity = location.getWorld().spawn(location, ArmorStand.class, e -> {
                         e.setPersistent(false);
-                        e.setShowingBottom(false);
+                        e.setVisible(false);
+                        e.setGravity(false);
+                        e.setMarker(true);
+                        e.setSmall(true);
+                        e.getEquipment().setHelmet(Mytems.BOSS_CHEST.createIcon());
                     });
+            } else if (goody.entity instanceof ArmorStand armorStand) {
+                EulerAngle euler = armorStand.getHeadPose();
+                euler = euler.setY(euler.getY() + 0.15);
+                armorStand.setHeadPose(euler);
+            }
+        }
+        for (Vec3i vector : tag.coins) {
+            Goody coin = coins.computeIfAbsent(vector, v -> new Goody(v));
+            if (coin.cooldown > 0) {
+                coin.cooldown -= 1;
+                continue;
+            }
+            if (coin.entity == null || coin.entity.isDead()) {
+                coin.entity = null;
+                Location location = coin.where.toLocation(getWorld()).add(0.0, 0.125, 0.0);
+                if (!location.isChunkLoaded()) continue;
+                coin.entity = location.getWorld().dropItem(location, Mytems.GOLDEN_COIN.createIcon(), e -> {
+                        e.setPersistent(false);
+                        e.setGravity(false);
+                        e.setCanPlayerPickup(false);
+                        e.setCanMobPickup(false);
+                        e.setUnlimitedLifetime(true);
+                        e.setWillAge(false);
+                        e.setPickupDelay(0);
+                        e.setVelocity(new Vector().zero());
+                    });
+            } else if (coin.entity instanceof Item item) {
+                item.teleport(coin.where.toLocation(getWorld()).add(0.0, 0.125, 0.0));
+                item.setVelocity(new Vector().zero());
             }
         }
     }
 
-    void clearGoodies() {
+    protected void clearGoodies() {
         for (Goody goody : goodies.values()) {
             if (goody.entity != null) {
                 goody.entity.remove();
@@ -825,6 +796,13 @@ public final class Race {
             }
         }
         goodies.clear();
+        for (Goody coin : coins.values()) {
+            if (coin.entity != null) {
+                coin.entity.remove();
+                coin.entity = null;
+            }
+        }
+        coins.clear();
     }
 
     public RaceType getRaceType() {
@@ -879,6 +857,45 @@ public final class Race {
                 continue;
             }
             player.getInventory().clear(i);
+        }
+    }
+
+    protected void sidebar(Player player, List<Component> lines) {
+        int i = 0;
+        List<Racer> racers = getRacers();
+        Racer theRacer = getRacer(player);
+        if (theRacer != null) {
+            lines.add(text("You are #" + (theRacer.rank + 1) + "/" + tag.countAllRacers(), GREEN));
+            lines.add(join(noSeparators(), Mytems.GOLDEN_COIN.component, text(" " + theRacer.coins, WHITE)));
+            if (!theRacer.finished) {
+                lines.add(text("Lap " + (theRacer.lap + 1) + "/" + tag.laps, GREEN));
+            } else {
+                lines.add(text(formatTime(theRacer.finishTime), GREEN));
+            }
+            if (player.getVehicle() instanceof Attributable ride) {
+                double speed = ride.getAttribute(GENERIC_MOVEMENT_SPEED).getValue();
+                lines.add(join(noSeparators(), text("Speed ", GRAY), text((int) Math.round(speed * 100.0), GOLD)));
+            }
+        }
+        String time = formatTimeShort(getTime());
+        String maxTime = tag.maxDuration > 0
+            ? formatTimeShort(tag.maxDuration * 1000L)
+            : "" + Unicode.INFINITY.character;
+        lines.add(join(noSeparators(), text("Time ", GREEN), text(time, YELLOW), text("/", WHITE), text(maxTime, RED)));
+        for (Racer racer : racers) {
+            Player racerPlayer = racer.getPlayer();
+            Component playerName = racerPlayer != null ? racerPlayer.displayName() : text(racer.name);
+            int index = i++;
+            if (index > 9) break;
+            if (racer.finished) {
+                lines.add(join(noSeparators(), text("" + (index + 1) + " "), playerName).color(GOLD));
+            } else if (racer.coins > 0) {
+                lines.add(join(noSeparators(), text(index + 1 + " "),
+                               Mytems.GOLDEN_COIN.component, text(racer.coins + " ", YELLOW),
+                               playerName).color(WHITE));
+            } else {
+                lines.add(join(noSeparators(), text(index + 1 + " "), playerName).color(WHITE));
+            }
         }
     }
 }

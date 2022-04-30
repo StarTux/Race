@@ -5,6 +5,7 @@ import org.bukkit.entity.Entity;
 
 /**
  * Runtime class of a goody on the race track.
+ * Could also be a coin.
  */
 @RequiredArgsConstructor
 public final class Goody {

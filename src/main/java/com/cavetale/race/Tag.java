@@ -7,7 +7,9 @@ import com.cavetale.core.editor.EditMenuItem;
 import com.cavetale.core.editor.EditMenuNode;
 import com.cavetale.mytems.Mytems;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
@@ -30,8 +32,10 @@ public final class Tag implements EditMenuAdapter {
     protected Position spawnLocation = Position.ZERO;
     @EditMenuItem(description = "Where individual racers will start the race")
     protected List<Vec3i> startVectors = new ArrayList<>();
-    @EditMenuItem(description = "Where goodie bags (end signals) will spawn")
-    protected List<Vec3i> goodies = new ArrayList<>();
+    @EditMenuItem(description = "Where goodie chests will spawn")
+    protected Set<Vec3i> goodies = new HashSet<>();
+    @EditMenuItem(description = "Where coins will spawn")
+    protected Set<Vec3i> coins = new HashSet<>();
     @EditMenuItem(description = "Mostly unused")
     protected Cuboid spawnArea = Cuboid.ZERO;
     @EditMenuItem(description = "Racers must touch checkpoints on after the other."
@@ -85,7 +89,8 @@ public final class Tag implements EditMenuAdapter {
             return cuboid;
         }
         case "startVectors":
-        case "goodies": {
+        case "goodies":
+        case "coins": {
             Cuboid cuboid = WorldEdit.getSelection(node.getContext().getPlayer());
             if (cuboid == null) {
                 throw new EditMenuException("No selection!");
@@ -147,6 +152,24 @@ public final class Tag implements EditMenuAdapter {
                                 race.setPhase(Phase.EDIT);
                                 player.sendMessage(text("Edit mode enabled", GREEN));
                             }
+                        }
+                    }
+                },
+                new EditMenuButton() {
+                    @Override public ItemStack getMenuIcon() {
+                        return Mytems.REDO.createIcon();
+                    }
+
+                    @Override public List<Component> getTooltip() {
+                        return List.of(text("Reload goodies", GREEN),
+                                       text("Reload track goodies", GRAY));
+                    }
+
+                    @Override public void onClick(Player player, ClickType click) {
+                        if (click.isLeftClick()) {
+                            Race race = RacePlugin.instance.races.at(player.getLocation());
+                            if (race == null) return;
+                            race.clearGoodies();
                         }
                     }
                 },
