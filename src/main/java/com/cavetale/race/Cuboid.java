@@ -48,6 +48,12 @@ public final class Cuboid implements EditMenuAdapter {
             && z >= az && z <= bz;
     }
 
+    public boolean contains2(int x, int y, int z) {
+        return x >= ax - 1 && x <= bx + 1
+            && y >= ay - 1 && y <= by + 1
+            && z >= az - 1 && z <= bz + 1;
+    }
+
     public boolean containsHorizontal(int x, int z) {
         return x >= ax && x <= bx
             && z >= az && z <= bz;
@@ -71,6 +77,10 @@ public final class Cuboid implements EditMenuAdapter {
 
     public boolean contains(Vec3i v) {
         return contains(v.x, v.y, v.z);
+    }
+
+    public boolean contains2(Vec3i v) {
+        return contains2(v.x, v.y, v.z);
     }
 
     public String getShortInfo() {

@@ -41,6 +41,7 @@ public final class Vec3i implements EditMenuAdapter {
     }
 
     public Vec3i add(int dx, int dy, int dz) {
+        if (dx == 0 && dy == 0 && dz == 0) return this;
         return new Vec3i(x + dx, y + dy, z + dz);
     }
 

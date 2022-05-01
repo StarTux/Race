@@ -62,6 +62,8 @@ public final class Tag implements EditMenuAdapter {
     protected int finishIndex = 0;
     @EditMenuItem(hidden = true, description = "ONLY USED FOR RACING")
     protected int rareItemsAvailable = 0;
+    @EditMenuItem(hidden = true, description = "ONLY USED FOR RACING")
+    protected int maxLap = 0;
 
     public int countRacers() {
         int count = 0;

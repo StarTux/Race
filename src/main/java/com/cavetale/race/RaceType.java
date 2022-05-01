@@ -12,6 +12,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.TreeSpecies;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.Pig;
@@ -63,6 +64,11 @@ public enum RaceType implements EditMenuAdapter {
         case ICE_BOAT: {
             TreeSpecies[] species = TreeSpecies.values();
             TreeSpecies theSpecies = species[ThreadLocalRandom.current().nextInt(species.length)];
+            while (location.getBlock().isLiquid()
+                   && location.getBlock().getBlockData() instanceof Levelled level
+                   && level.getLevel() == 0) {
+                location = location.add(0.0, 1.0, 0.0);
+            }
             return location.getWorld().spawn(location, Boat.class, e -> {
                     e.setPersistent(false);
                     e.setWoodType(theSpecies);

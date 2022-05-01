@@ -37,8 +37,10 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Vehicle;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
@@ -115,8 +117,9 @@ public final class Race {
         if (ticksLeft < 0) {
             setPhase(Phase.RACE);
             tag.startTime = System.currentTimeMillis();
-            tag.rareItemsAvailable = tag.laps * 3;
+            tag.rareItemsAvailable = 0;
             tag.finishIndex = 0;
+            tag.maxLap = 0;
             tag.racers.removeIf(r -> !r.isOnline());
             for (Racer racer : tag.racers) {
                 setupCheckpoint(racer, tag.checkpoints.get(0));
@@ -176,7 +179,7 @@ public final class Race {
         if (racer.finished) return;
         Vec3i vec = Vec3i.of(block);
         Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
-        if (checkpoint.contains(vec)) {
+        if (checkpoint.contains2(vec)) {
             progressCheckpoint(player, racer);
             if (!racer.finished) {
                 checkpoint = tag.checkpoints.get(racer.checkpointIndex);
@@ -184,17 +187,14 @@ public final class Race {
             }
         }
         long now = System.currentTimeMillis();
-        for (int y = -1; y <= 1; y += 1) {
-            for (int z = -1; z <= 1; z += 1) {
-                for (int x = -1; x <= 1; x += 1) {
-                    Vec3i vec2 = vec.add(x, y, z);
-                    if (racer.goodyCooldown < now && GoodyItem.count(player.getInventory()) < 2) {
-                        onTouchGoody(player, racer, vec2);
-                    }
-                    if (racer.coins < MAX_COINS) {
-                        onTouchCoin(player, racer, vec2);
-                    }
-                }
+        if (racer.goodyCooldown < now && GoodyItem.count(player.getInventory()) < 2) {
+            for (int y = 0; y < 2; y += 1) {
+                onTouchGoody(player, racer, vec.add(0, 1, 0));
+            }
+        }
+        if (racer.coins < MAX_COINS) {
+            for (int y = 0; y < 2; y += 1) {
+                onTouchCoin(player, racer, vec.add(0, 1, 0));
             }
         }
     }
@@ -302,6 +302,10 @@ public final class Race {
         if (racer.checkpointIndex >= tag.checkpoints.size()) {
             racer.checkpointIndex = 0;
             racer.lap += 1;
+            if (racer.lap > tag.maxLap) {
+                tag.maxLap += 1;
+                tag.rareItemsAvailable += 1;
+            }
             if (racer.lap >= tag.laps) {
                 racer.finished = true;
                 racer.finishTime = System.currentTimeMillis() - tag.startTime;
@@ -377,9 +381,11 @@ public final class Race {
             Player player = racer.getPlayer();
             if (player == null) continue;
             Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
-            Location loc = player.getLocation();
+            Entity vehicle = player.getVehicle();
+            Location loc = vehicle != null
+                ? vehicle.getLocation()
+                : player.getLocation();
             passThroughBlock(player, racer, loc.getBlock());
-            passThroughBlock(player, racer, loc.getBlock().getRelative(0, 2, 0));
             try {
                 Cuboid cp = tag.checkpoints.get(racer.checkpointIndex);
                 Vec3i pos = Vec3i.of(loc.getBlock());
@@ -426,11 +432,11 @@ public final class Race {
                 }
             }
             if (tag.type.isMounted()) {
-                if (player.getVehicle() == null) {
+                if (vehicle == null) {
                     if (racer.remountCooldown > 0) {
                         racer.remountCooldown -= 1;
                     } else {
-                        Vehicle vehicle = tag.type.spawnVehicle(player.getLocation());
+                        vehicle = tag.type.spawnVehicle(player.getLocation());
                         if (vehicle != null) {
                             vehicle.addPassenger(player);
                             updateVehicleSpeed(player, racer, vehicle);
@@ -442,6 +448,12 @@ public final class Race {
                 racer.invincibleTicks -= 1;
                 if (racer.invincibleTicks <= 0) {
                     player.removePotionEffect(PotionEffectType.GLOWING);
+                    if (vehicle != null) {
+                        vehicle.setGlowing(false);
+                        if (vehicle instanceof LivingEntity living) {
+                            living.removePotionEffect(PotionEffectType.GLOWING);
+                        }
+                    }
                 }
             }
         }
@@ -704,15 +716,6 @@ public final class Race {
         player.playSound(loc, Sound.ENTITY_ENDER_PEARL_THROW, SoundCategory.MASTER, 0.5f, 1.0f);
     }
 
-    protected void onDamage(Player player, EntityDamageEvent event) {
-        event.setCancelled(true);
-        Racer racer = getRacer(player);
-        if (racer == null) return;
-        if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
-            Bukkit.getScheduler().runTask(plugin, () -> teleportToLastCheckpoint(player));
-        }
-    }
-
     public long getTime() {
         switch (tag.phase) {
         case RACE:
@@ -877,7 +880,9 @@ public final class Race {
         Racer theRacer = getRacer(player);
         if (theRacer != null) {
             lines.add(text("You are #" + (theRacer.rank + 1) + "/" + tag.countAllRacers(), GREEN));
-            lines.add(join(noSeparators(), Mytems.GOLDEN_COIN.component, text(" " + theRacer.coins, WHITE), text("/" + MAX_COINS, GRAY)));
+            if (!tag.coins.isEmpty()) {
+                lines.add(join(noSeparators(), Mytems.GOLDEN_COIN.component, text(" " + theRacer.coins, WHITE), text("/" + MAX_COINS, GRAY)));
+            }
             if (!theRacer.finished) {
                 lines.add(text("Lap " + (theRacer.lap + 1) + "/" + tag.laps, GREEN));
             } else {
@@ -900,13 +905,81 @@ public final class Race {
             if (index > 9) break;
             if (racer.finished) {
                 lines.add(join(noSeparators(), text("" + (index + 1) + " "), playerName).color(GOLD));
-            } else if (racer.coins > 0) {
+            } else if (!tag.coins.isEmpty()) {
                 lines.add(join(noSeparators(), text(index + 1 + " "),
                                Mytems.GOLDEN_COIN.component, text(racer.coins + " ", YELLOW),
                                playerName).color(WHITE));
             } else {
                 lines.add(join(noSeparators(), text(index + 1 + " "), playerName).color(WHITE));
             }
+        }
+    }
+
+    /**
+     * Attempt to damage the player's vehicle.
+     */
+    protected boolean damageVehicle(Player player, Racer racer, double amount, boolean clearCoinsOnDeath) {
+        if (racer.isInvincible()) return false;
+        Entity vehicle = player.getVehicle();
+        if (vehicle != null) {
+            if (vehicle instanceof LivingEntity living) {
+                final double health = living.getHealth();
+                if (health - amount >= 0.5) {
+                    living.setHealth(health - amount);
+                } else {
+                    vehicle.remove();
+                    racer.remountCooldown = 60;
+                    if (clearCoinsOnDeath) {
+                        setCoins(player, racer, 0);
+                    }
+                    player.sendMessage(text("You lost your vehicle", RED));
+                }
+            } else {
+                vehicle.remove();
+                if (clearCoinsOnDeath) {
+                    setCoins(player, racer, 0);
+                }
+                player.sendMessage(text("You lost your vehicle", RED));
+            }
+            return true;
+        }
+        if (player.isGliding()) {
+            player.setGliding(false);
+            racer.remountCooldown = 60;
+            if (clearCoinsOnDeath) {
+                setCoins(player, racer, 0);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    protected void onPlayerDamage(Player player, EntityDamageEvent event) {
+        event.setCancelled(true);
+        Racer racer = getRacer(player);
+        if (racer == null) return;
+        if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
+            Bukkit.getScheduler().runTask(plugin, () -> teleportToLastCheckpoint(player));
+        }
+    }
+
+    protected void onPlayerVehicleDamage(Player player, Racer racer, EntityDamageEvent event) {
+        event.setCancelled(true);
+        if (event instanceof EntityDamageByEntityEvent event2) {
+            if (event2.getDamager() instanceof Firework) {
+                return;
+            }
+        }
+        if (racer.isInvincible()) {
+            return;
+        }
+        if (event.getCause() == DamageCause.ENTITY_EXPLOSION || event.getCause() == DamageCause.BLOCK_EXPLOSION) {
+            event.setCancelled(true);
+            damageVehicle(player, racer, 20.0, true);
+        } else if (event.getCause() == DamageCause.CONTACT) {
+            event.setCancelled(false);
+        } else {
+            damageVehicle(player, racer, event.getFinalDamage(), true);
         }
     }
 }

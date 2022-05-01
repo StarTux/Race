@@ -13,10 +13,13 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.AbstractArrow;
+import org.bukkit.entity.Boat;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -32,8 +35,6 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.AreaEffectCloudApplyEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityCombustEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
@@ -49,9 +50,11 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.vehicle.VehicleEntityCollisionEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
+import org.bukkit.util.Vector;
 import org.spigotmc.event.entity.EntityDismountEvent;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 import static net.kyori.adventure.text.Component.join;
@@ -70,14 +73,12 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
-        if (event instanceof EntityDamageByEntityEvent) return;
         Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null) return;
-        if (event.getCause() == DamageCause.ENTITY_EXPLOSION || event.getCause() == DamageCause.BLOCK_EXPLOSION) {
-            onVehicleExplosion(event.getEntity(), race);
-        }
         if (event.getEntity() instanceof Player player) {
-            race.onDamage(player, event);
+            race.onPlayerDamage(player, event);
+        } else {
+            onVehicleDamage(event.getEntity(), race, event);
         }
         if (event.getEntity() instanceof EnderCrystal) {
             event.setCancelled(true);
@@ -85,46 +86,13 @@ public final class EventListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        Race race = plugin.races.at(event.getEntity().getLocation());
-        if (race == null) return;
-        event.setCancelled(true);
-            if (event.getDamager() instanceof Firework) return;
-        if (event.getCause() == DamageCause.ENTITY_EXPLOSION || event.getCause() == DamageCause.BLOCK_EXPLOSION) {
-            onVehicleExplosion(event.getEntity(), race);
-        }
-    }
-
-    private void onVehicleExplosion(Entity entity, Race race) {
+    private void onVehicleDamage(Entity entity, Race race, EntityDamageEvent event) {
         List<Entity> passengers = entity.getPassengers();
         if (passengers == null || passengers.isEmpty()) return;
         if (passengers.get(0) instanceof Player player) {
-            onExplosionDamage(player, race);
-        }
-    }
-
-    private void onExplosionDamage(Player player, Race race) {
-        Racer racer = race.getRacer(player);
-        if (racer == null || racer.isInvincible()) return;
-        Entity vehicle = player.getVehicle();
-        if (vehicle instanceof LivingEntity living) {
-            double health = living.getHealth();
-            final double dmg = 10;
-            if (health - dmg >= 0.5) {
-                living.setHealth(health - dmg);
-                player.sendMessage(ChatColor.RED + "Mount damaged");
-            } else {
-                vehicle.remove();
-                player.sendMessage(ChatColor.RED + "Mount destroyed");
-                racer.remountCooldown = 60;
-                race.setCoins(player, racer, 0);
-            }
-        } else if (vehicle != null) {
-            vehicle.remove();
-            player.sendMessage(ChatColor.RED + "Mount destroyed");
-            racer.remountCooldown = 60;
-            race.setCoins(player, racer, 0);
+            Racer racer = race.getRacer(player);
+            if (racer == null) return;
+            race.onPlayerVehicleDamage(player, racer, event);
         }
     }
 
@@ -283,6 +251,8 @@ public final class EventListener implements Listener {
         switch (event.getAction()) {
         case RIGHT_CLICK_BLOCK:
         case RIGHT_CLICK_AIR:
+        case LEFT_CLICK_BLOCK:
+        case LEFT_CLICK_AIR:
             break;
         default: return;
         }
@@ -326,6 +296,18 @@ public final class EventListener implements Listener {
         if (!(passengerList.get(0) instanceof Player)) return;
         Player player = (Player) passengerList.get(0);
         race.onMoveFromTo(player, event.getFrom(), event.getTo());
+        if (event.getVehicle() instanceof Boat boat) {
+            Location to = event.getTo().clone().add(0.0, 0.55, 0.0);
+            Block block = to.getBlock();
+            if (block.isLiquid()
+                && block.getBlockData() instanceof Levelled level
+                && level.getLevel() == 0) {
+                Vector velo = event.getTo().toVector().subtract(event.getFrom().toVector());
+                if (velo.getY() < 0) {
+                    boat.setVelocity(velo.setY(0.25));
+                }
+            }
+        }
     }
 
     @EventHandler
@@ -399,6 +381,8 @@ public final class EventListener implements Listener {
 
     @EventHandler
     void onAreaEffectCloudApply(AreaEffectCloudApplyEvent event) {
+        Race race = plugin.races.at(event.getEntity().getLocation());
+        if (race == null) return;
         List<LivingEntity> entities = event.getAffectedEntities();
         if (event.getEntity().getSource() instanceof Player) {
             Player shooter = (Player) event.getEntity().getSource();
@@ -411,6 +395,16 @@ public final class EventListener implements Listener {
                 if (shooter.getVehicle() != null && shooter.getVehicle().equals(it)) {
                     iter.remove();
                     continue;
+                }
+                if (it instanceof Player player) {
+                    Racer racer = race.getRacer(player);
+                    if (racer != null && racer.isInvincible()) iter.remove();
+                    continue;
+                }
+                List<Entity> passengers = it.getPassengers();
+                if (!passengers.isEmpty() && passengers.get(0) instanceof Player player) {
+                    Racer racer = race.getRacer(player);
+                    if (racer != null && racer.isInvincible()) iter.remove();
                 }
             }
         }
@@ -445,5 +439,26 @@ public final class EventListener implements Listener {
                 event.setSpawnLocation(race.getSpawnLocation());
             }
         }
+    }
+
+    @EventHandler
+    void onVehicleEntityCollision(VehicleEntityCollisionEvent event) {
+        Race race = plugin.races.at(event.getVehicle().getLocation());
+        if (race == null) return;
+        List<Entity> passengersA = event.getVehicle().getPassengers();
+        if (passengersA.isEmpty() || !(passengersA.get(0) instanceof Player playerA)) return;
+        Racer racerA = race.getRacer(playerA);
+        if (racerA == null) return;
+        List<Entity> passengersB = event.getEntity().getPassengers();
+        if (passengersB.isEmpty() || !(passengersB.get(0) instanceof Player playerB)) return;
+        Racer racerB = race.getRacer(playerB);
+        if (racerB == null) return;
+        if (racerA.isInvincible() && !racerB.isInvincible()) {
+            race.damageVehicle(playerB, racerB, 20.0, true);
+        }
+        if (racerB.isInvincible() && !racerA.isInvincible()) {
+            race.damageVehicle(playerA, racerA, 20.0, true);
+        }
+        event.setCancelled(true);
     }
 }
