@@ -210,13 +210,12 @@ public final class EventListener implements Listener {
                 placement += 1;
             }
             TrophyType trophy = trophies.get(Math.min(placement, trophies.size()) - 1);
-            lines.add(join(noSeparators(), new Component[] {
-                        trophy.mytems.component,
-                        Glyph.toComponent("" + placement),
-                        text(Unicode.tiny("" + score), trophy.quality.textColor),
-                        space(),
-                        name,
-                    }));
+            lines.add(join(noSeparators(),
+                           trophy.mytems.component,
+                           Glyph.toComponent("" + placement),
+                           text(Unicode.subscript("" + score), trophy.quality.textColor),
+                           space(),
+                           name));
         }
     }
 
