@@ -58,6 +58,7 @@ import org.bukkit.util.Vector;
 import org.spigotmc.event.entity.EntityDismountEvent;
 import org.spigotmc.event.player.PlayerSpawnLocationEvent;
 import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.JoinConfiguration.separator;
@@ -185,6 +186,8 @@ public final class EventListener implements Listener {
         int playerScore = plugin.save.scores.getOrDefault(player.getUniqueId(), 0);
         lines.add(text("Your Score ", WHITE)
                   .append(text(playerScore, BLUE)));
+        int placement = 0;
+        int lastScore = -1;
         for (int i = 0; i < 10; i += 1) {
             final int score;
             final Component name;
@@ -199,8 +202,12 @@ public final class EventListener implements Listener {
                 score = 0;
                 name = text("???", DARK_GRAY);
             }
-            lines.add(Component.join(separator(Component.space()), new Component[] {
-                        Glyph.toComponent("" + (i + 1)),
+            if (lastScore != score) {
+                lastScore = score;
+                placement += 1;
+            }
+            lines.add(join(separator(space()), new Component[] {
+                        Glyph.toComponent("" + placement),
                         text(score, (i < 3 ? GOLD : GRAY)),
                         name,
                     }));

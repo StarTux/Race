@@ -3,7 +3,7 @@ package com.cavetale.race;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.SQLTrophy;
 import com.cavetale.fam.trophy.Trophies;
-import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.race.struct.Area;
 import com.cavetale.race.struct.AreasFile;
 import java.io.File;
@@ -132,18 +132,21 @@ public final class RacePlugin extends JavaPlugin {
                              text("x", color(0xffff00)));
             List<SQLTrophy> trophies = new ArrayList<>();
             int i = 0;
+            int placement = 0;
+            int lastScore = -1;
             for (UUID uuid : uuids) {
-                final int placement = ++i;
                 final int score = save.scores.getOrDefault(uuid, 0);
                 if (score == 0) break;
-                final Mytems mytems;
-                switch (placement) {
-                case 1: mytems = Mytems.GOLDEN_CUP; break;
-                case 2: mytems = Mytems.SILVER_CUP; break;
-                case 3: mytems = Mytems.BRONZE_CUP; break;
-                default: mytems = Mytems.BLUNDERBUSS;
+                if (lastScore != score) {
+                    lastScore = score;
+                    placement += 1;
                 }
-                trophies.add(new SQLTrophy(uuid, "race_grand_prix", placement, mytems, title, "You earned " + score + " points"));
+                trophies.add(new SQLTrophy(uuid,
+                                           "race_grand_prix",
+                                           placement,
+                                           TrophyCategory.CUP,
+                                           title,
+                                           "You earned " + score + " points"));
             }
             Trophies.insertTrophies(trophies);
         }
