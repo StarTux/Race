@@ -1,7 +1,10 @@
 package com.cavetale.race;
 
+import com.cavetale.core.font.Unicode;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.font.Glyph;
+import com.cavetale.mytems.item.trophy.TrophyCategory;
+import com.cavetale.mytems.item.trophy.TrophyType;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
@@ -61,7 +64,6 @@ import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
-import static net.kyori.adventure.text.JoinConfiguration.separator;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 @RequiredArgsConstructor
@@ -188,6 +190,7 @@ public final class EventListener implements Listener {
                   .append(text(playerScore, BLUE)));
         int placement = 0;
         int lastScore = -1;
+        List<TrophyType> trophies = TrophyType.of(TrophyCategory.CUP);
         for (int i = 0; i < 10; i += 1) {
             final int score;
             final Component name;
@@ -206,9 +209,12 @@ public final class EventListener implements Listener {
                 lastScore = score;
                 placement += 1;
             }
-            lines.add(join(separator(space()), new Component[] {
+            TrophyType trophy = trophies.get(Math.min(placement, trophies.size()) - 1);
+            lines.add(join(noSeparators(), new Component[] {
+                        trophy.mytems.component,
                         Glyph.toComponent("" + placement),
-                        text(score, (i < 3 ? GOLD : GRAY)),
+                        text(Unicode.tiny("" + score), trophy.quality.textColor),
+                        space(),
                         name,
                     }));
         }
