@@ -188,13 +188,21 @@ public final class Race {
         }
         long now = System.currentTimeMillis();
         if (racer.goodyCooldown < now && GoodyItem.count(player.getInventory()) < 2) {
-            for (int y = 0; y < 2; y += 1) {
-                onTouchGoody(player, racer, vec.add(0, y - 1, 0));
+            for (int y = -1; y < 2; y += 1) {
+                for (int x = -1; x < 2; x += 1) {
+                    for (int z = -1; z < 2; z += 1) {
+                        onTouchGoody(player, racer, vec.add(x, y, z));
+                    }
+                }
             }
         }
         if (racer.coins < MAX_COINS) {
-            for (int y = 0; y < 2; y += 1) {
-                onTouchCoin(player, racer, vec.add(0, y - 1, 0));
+            for (int y = -1; y < 2; y += 1) {
+                for (int x = -1; x < 2; x += 1) {
+                    for (int z = -1; z < 2; z += 1) {
+                        onTouchCoin(player, racer, vec.add(x, y, z));
+                    }
+                }
             }
         }
     }
