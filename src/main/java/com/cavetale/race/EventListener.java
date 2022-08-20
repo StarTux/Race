@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import com.cavetale.core.font.Unicode;
+import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
@@ -8,7 +9,6 @@ import com.cavetale.mytems.item.trophy.TrophyType;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
-import com.winthier.playercache.PlayerCache;
 import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import java.util.ArrayList;
 import java.util.Iterator;

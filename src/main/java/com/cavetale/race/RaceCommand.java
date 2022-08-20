@@ -8,7 +8,7 @@ import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.editor.EditMenuDelegate;
 import com.cavetale.core.editor.EditMenuNode;
 import com.cavetale.core.editor.Editor;
-import com.winthier.playercache.PlayerCache;
+import com.cavetale.core.playercache.PlayerCache;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
