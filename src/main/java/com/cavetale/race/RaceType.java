@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.TreeSpecies;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.Boat;
@@ -62,8 +61,6 @@ public enum RaceType implements EditMenuAdapter {
                 });
         case BOAT:
         case ICE_BOAT: {
-            TreeSpecies[] species = TreeSpecies.values();
-            TreeSpecies theSpecies = species[ThreadLocalRandom.current().nextInt(species.length)];
             while (location.getBlock().isLiquid()
                    && location.getBlock().getBlockData() instanceof Levelled level
                    && level.getLevel() == 0) {
@@ -71,7 +68,9 @@ public enum RaceType implements EditMenuAdapter {
             }
             return location.getWorld().spawn(location, Boat.class, e -> {
                     e.setPersistent(false);
-                    e.setWoodType(theSpecies);
+                    Boat.Type[] types = Boat.Type.values();
+                    Boat.Type theType = types[ThreadLocalRandom.current().nextInt(types.length)];
+                    e.setBoatType(theType);
                 });
         }
         case HORSE: {

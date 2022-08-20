@@ -6,7 +6,7 @@ description: Racing Minigame
 website: https://cavetale.com
 
 version: 0.1
-api-version: 1.18
+api-version: 1.19
 
 depend: [Core, Mytems, Sidebar, WorldEdit, PlayerCache, WorldMarker, Fam]
 softdepend: []

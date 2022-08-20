@@ -9,6 +9,7 @@ import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.winthier.playercache.PlayerCache;
+import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -471,6 +472,13 @@ public final class EventListener implements Listener {
         if (racerB.isInvincible() && !racerA.isInvincible()) {
             race.damageVehicle(playerA, racerA, 20.0, true);
         }
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onPlayerFlowerPotManipulate(PlayerFlowerPotManipulateEvent event) {
+        if (!plugin.races.isRace(event.getFlowerpot())) return;
+        if (event.getPlayer().isOp()) return;
         event.setCancelled(true);
     }
 }
