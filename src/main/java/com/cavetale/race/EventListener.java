@@ -386,6 +386,7 @@ public final class EventListener implements Listener {
 
     @EventHandler
     void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        if (NetworkServer.current() != NetworkServer.RACE) return;
         Race race = plugin.races.at(event.getPlayer().getLocation());
         if (race == null) return;
         if (event.getRightClicked().getType() == EntityType.BOAT) {
