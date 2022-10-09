@@ -9,6 +9,8 @@ import com.cavetale.core.editor.EditMenuDelegate;
 import com.cavetale.core.editor.EditMenuNode;
 import com.cavetale.core.editor.Editor;
 import com.cavetale.core.playercache.PlayerCache;
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec3i;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -129,14 +131,6 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         plugin.getCommand("race").setExecutor(this);
     }
 
-    private Cuboid requireWorldEditSelection(Player player) {
-        Cuboid cuboid = WorldEdit.getSelection(player);
-        if (cuboid == null) {
-            throw new CommandWarn("Make a WorldEdit selection first!");
-        }
-        return cuboid;
-    }
-
     private Race requireRace(Player player) {
         Race race = plugin.races.at(player.getLocation());
         if (race == null) {
@@ -188,7 +182,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 1) return false;
         String name = args[0];
         Race race = plugin.races.named(name);
-        Cuboid cuboid = requireWorldEditSelection(player);
+        Cuboid cuboid = Cuboid.requireSelectionOf(player);
         if (race == null) {
             race = new Race(plugin, name, new Tag());
             plugin.races.add(race);
@@ -205,7 +199,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        Cuboid cuboid = requireWorldEditSelection(player);
+        Cuboid cuboid = Cuboid.requireSelectionOf(player);
         race.setSpawnLocation(player.getLocation());
         race.setSpawnArea(cuboid);
         race.save();
@@ -254,7 +248,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         context.message("" + ChatColor.YELLOW + race.name + ": " + checkpoints.size() + " checkpoint(s)");
         int i = 0;
         for (Cuboid cuboid : checkpoints) {
-            context.message("  " + (i++) + " " + ChatColor.YELLOW + cuboid.getShortInfo());
+            context.message("  " + (i++) + " " + ChatColor.YELLOW + cuboid);
         }
         return true;
     }
@@ -263,7 +257,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (args.length > 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        Cuboid cuboid = requireWorldEditSelection(player);
+        Cuboid cuboid = Cuboid.requireSelectionOf(player);
         List<Cuboid> checkpoints = race.getCheckpoints();
         int index = args.length == 0
             ? checkpoints.size()
@@ -274,7 +268,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         checkpoints.add(index, cuboid);
         race.setCheckpoints(checkpoints);
         race.save();
-        context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint added: " + cuboid.getShortInfo());
+        context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint added: " + cuboid);
         return true;
     }
 
@@ -286,7 +280,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         for (Cuboid cuboid : checkpoints) {
             if (cuboid.contains(player.getLocation())) {
                 int index = checkpoints.indexOf(cuboid);
-                context.message(ChatColor.YELLOW + "This is checkpoint #" + index + " " + cuboid.getShortInfo());
+                context.message(ChatColor.YELLOW + "This is checkpoint #" + index + " " + cuboid);
             }
         }
         return true;
@@ -388,7 +382,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         switch (args[0]) {
         case "add": {
             Race race = requireRace(player);
-            Cuboid cuboid = requireWorldEditSelection(player);
+            Cuboid cuboid = Cuboid.requireSelectionOf(player);
             int count = 0;
             for (Vec3i vector : cuboid.enumerate()) {
                 if (!race.tag.startVectors.contains(vector)) {
@@ -402,7 +396,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         }
         case "remove": {
             Race race = requireRace(player);
-            Cuboid cuboid = requireWorldEditSelection(player);
+            Cuboid cuboid = Cuboid.requireSelectionOf(player);
             int count = 0;
             for (Vec3i vector : cuboid.enumerate()) {
                 if (race.tag.startVectors.contains(vector)) {
@@ -432,7 +426,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         switch (args[0]) {
         case "add": {
             Race race = requireRace(player);
-            Vec3i vec = requireWorldEditSelection(player).getMin();
+            Vec3i vec = Cuboid.requireSelectionOf(player).getMin();
             if (race.tag.goodies.contains(vec)) {
                 throw new CommandWarn("Goodie already exists: " + vec);
             }
@@ -443,7 +437,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         }
         case "remove": {
             Race race = requireRace(player);
-            Vec3i vec = requireWorldEditSelection(player).getMin();
+            Vec3i vec = Cuboid.requireSelectionOf(player).getMin();
             if (!race.tag.goodies.contains(vec)) {
                 throw new CommandWarn("No goodie here: " + vec);
             }
@@ -479,7 +473,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
                 dy = requireInt(args[2]);
                 dz = requireInt(args[3]);
             }
-            Vec3i vec = requireWorldEditSelection(player).getMin().add(dx, dy, dz);
+            Vec3i vec = Cuboid.requireSelectionOf(player).getMin().add(dx, dy, dz);
             if (race.tag.coins.contains(vec)) {
                 throw new CommandWarn("Coin already exists: " + vec);
             }
@@ -491,7 +485,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         case "remove": {
             if (args.length != 1) return false;
             Race race = requireRace(player);
-            Vec3i vec = requireWorldEditSelection(player).getMin();
+            Vec3i vec = Cuboid.requireSelectionOf(player).getMin();
             if (!race.tag.coins.contains(vec)) {
                 throw new CommandWarn("No coin here: " + vec);
             }
@@ -553,7 +547,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
 
     private boolean setArea(Player player, String[] args) {
         Race race = requireRace(player);
-        Cuboid cuboid = requireWorldEditSelection(player);
+        Cuboid cuboid = Cuboid.requireSelectionOf(player);
         race.tag.area = cuboid;
         race.save();
         player.sendMessage(ChatColor.GREEN + "Event area reset: " + race.tag.area);

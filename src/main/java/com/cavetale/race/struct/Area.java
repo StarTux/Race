@@ -1,6 +1,6 @@
 package com.cavetale.race.struct;
 
-import com.cavetale.race.Vec3i;
+import com.cavetale.core.struct.Vec3i;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Value;

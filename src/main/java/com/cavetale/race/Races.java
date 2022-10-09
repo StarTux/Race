@@ -46,7 +46,7 @@ public final class Races {
     public Race at(Location loc) {
         for (Race race : races) {
             if (!race.isIn(loc.getWorld())) continue;
-            if (race.tag.area.containsHorizontal(loc)) return race;
+            if (Race.containsHorizontal(race.tag.area, loc)) return race;
         }
         return null;
     }
@@ -54,7 +54,7 @@ public final class Races {
     public Race at(Block block) {
         for (Race race : races) {
             if (!race.isIn(block.getWorld())) continue;
-            if (race.tag.area.containsHorizontal(block)) return race;
+            if (Race.containsHorizontal(race.tag.area, block)) return race;
         }
         return null;
     }

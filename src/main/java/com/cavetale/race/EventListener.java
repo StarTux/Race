@@ -1,5 +1,6 @@
 package com.cavetale.race;
 
+import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.mytems.Mytems;
@@ -149,6 +150,7 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
+        if (NetworkServer.current() != NetworkServer.RACE) return;
         if (!plugin.races.isRace(event.getBlock())) return;
         if (event.getPlayer().isOp()) return;
         event.setCancelled(true);
@@ -156,6 +158,7 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
+        if (NetworkServer.current() != NetworkServer.RACE) return;
         if (!plugin.races.isRace(event.getBlock())) return;
         if (event.getPlayer().isOp()) return;
         event.setCancelled(true);

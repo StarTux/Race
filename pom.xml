@@ -47,12 +47,6 @@
       <url>https://papermc.io/repo/repository/maven-public/</url>
     </repository>
 
-    <!-- WorldEdit Repo -->
-    <repository>
-      <id>worldedit</id>
-      <url>http://maven.enginehub.org/repo/</url>
-    </repository>
-
   </repositories>
   <dependencies>
 
@@ -69,14 +63,6 @@
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>1.18.20</version>
-      <scope>provided</scope>
-    </dependency>
-
-    <!-- WorldEdit -->
-    <dependency>
-      <groupId>com.sk89q.worldedit</groupId>
-      <artifactId>worldedit-bukkit</artifactId>
-      <version>7.3.0-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
 

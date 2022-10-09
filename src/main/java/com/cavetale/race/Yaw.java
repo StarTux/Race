@@ -1,5 +1,7 @@
 package com.cavetale.race;
 
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec3i;
 import static java.lang.Math.abs;
 
 public final class Yaw {

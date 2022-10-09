@@ -1,5 +1,6 @@
 package com.cavetale.race;
 
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.SQLTrophy;
 import com.cavetale.fam.trophy.Trophies;

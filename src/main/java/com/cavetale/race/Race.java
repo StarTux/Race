@@ -1,9 +1,11 @@
 package com.cavetale.race;
 
 import com.cavetale.core.font.Unicode;
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec2i;
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
-import com.cavetale.race.struct.Vec2i;
 import com.cavetale.race.util.Rnd;
 import java.io.File;
 import java.time.Duration;
@@ -175,11 +177,17 @@ public final class Race {
         }
     }
 
+    private static boolean contains2(Cuboid cuboid, Vec3i vec) {
+        return vec.x >= cuboid.ax - 1 && vec.x <= cuboid.bx + 1
+            && vec.y >= cuboid.ay - 1 && vec.y <= cuboid.by + 1
+            && vec.z >= cuboid.az - 1 && vec.z <= cuboid.bz + 1;
+    }
+
     private void passThroughBlock(Player player, Racer racer, Block block) {
         if (racer.finished) return;
         Vec3i vec = Vec3i.of(block);
         Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
-        if (checkpoint.contains2(vec)) {
+        if (contains2(checkpoint, vec)) {
             progressCheckpoint(player, racer);
             if (!racer.finished) {
                 checkpoint = tag.checkpoints.get(racer.checkpointIndex);
@@ -481,6 +489,20 @@ public final class Race {
         player.setCompassTarget(center.toBlock(getWorld()).getLocation());
     }
 
+    protected static boolean containsHorizontal(Cuboid cuboid, Location location) {
+        final int x = location.getBlockX();
+        final int z = location.getBlockZ();
+        return x >= cuboid.ax && x <= cuboid.bx
+            && z >= cuboid.az && z <= cuboid.bz;
+    }
+
+    protected static boolean containsHorizontal(Cuboid cuboid, Block block) {
+        final int x = block.getX();
+        final int z = block.getZ();
+        return x >= cuboid.ax && x <= cuboid.bx
+            && z >= cuboid.az && z <= cuboid.bz;
+    }
+
     void pruneRacers() {
         tag.racers.removeIf(racer -> {
                 if (racer.finished) return false;
@@ -491,7 +513,7 @@ public final class Race {
                     return true;
                 }
                 Location loc = player.getLocation();
-                if (!isIn(loc.getWorld()) || !tag.area.containsHorizontal(loc)) {
+                if (!isIn(loc.getWorld()) || !containsHorizontal(tag.area, loc)) {
                     player.setWalkSpeed(0.2f);
                     return true;
                 }
@@ -560,13 +582,13 @@ public final class Race {
     public List<Player> getEligiblePlayers() {
         return getWorld().getPlayers().stream()
             .filter(p -> !(p.isPermissionSet("group.streamer") && p.hasPermission("group.streamer")))
-            .filter(p -> tag.area.containsHorizontal(p.getLocation()))
+            .filter(p -> containsHorizontal(tag.area, p.getLocation()))
             .collect(Collectors.toList());
     }
 
     public List<Player> getPresentPlayers() {
         return getWorld().getPlayers().stream()
-            .filter(p -> tag.area.containsHorizontal(p.getLocation()))
+            .filter(p -> containsHorizontal(tag.area, p.getLocation()))
             .collect(Collectors.toList());
     }
 
@@ -579,10 +601,17 @@ public final class Race {
         return location;
     }
 
+    private static int simpleDistance(Vec3i a, Vec3i b) {
+        return Math.max(Math.abs(b.y - a.y),
+                        Math.max(Math.abs(b.x - a.x),
+                                 Math.abs(b.z - a.z)));
+    }
+
     public void startRace() {
         tag.racers.clear();
         Vec3i center = tag.checkpoints.get(0).getCenter();
-        Collections.sort(tag.startVectors, (a, b) -> Integer.compare(center.simpleDistance(a), center.simpleDistance(b)));
+        Collections.sort(tag.startVectors, (a, b) -> Integer.compare(simpleDistance(center, a),
+                                                                     simpleDistance(center, b)));
         int startVectorIndex = 0;
         List<Player> players = getEligiblePlayers();
         Collections.shuffle(players);
@@ -701,6 +730,10 @@ public final class Race {
         }
     }
 
+    private static Block getBottomBlock(Cuboid cuboid, World world) {
+        return world.getBlockAt((cuboid.ax + cuboid.bx) / 2, cuboid.ay, (cuboid.az + cuboid.bz) / 2);
+    }
+
     public void teleportToLastCheckpoint(Player player) {
         Racer racer = getRacer(player);
         if (racer == null) return;
@@ -709,7 +742,7 @@ public final class Race {
         if (checkpoint.equals(Cuboid.ZERO)) {
             loc = racer.startVector.toLocation(getWorld());
         } else {
-            Block block = checkpoint.getBottomBlock(getWorld());
+            Block block = getBottomBlock(checkpoint, getWorld());
             while (!block.isPassable()) block = block.getRelative(0, 1, 0);
             loc = block.getLocation().add(0.5, 0.0, 0.5);
         }

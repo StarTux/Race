@@ -5,6 +5,8 @@ import com.cavetale.core.editor.EditMenuButton;
 import com.cavetale.core.editor.EditMenuException;
 import com.cavetale.core.editor.EditMenuItem;
 import com.cavetale.core.editor.EditMenuNode;
+import com.cavetale.core.struct.Cuboid;
+import com.cavetale.core.struct.Vec3i;
 import com.cavetale.mytems.Mytems;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -85,7 +87,7 @@ public final class Tag implements EditMenuAdapter {
     public Object createNewValue(EditMenuNode node, String fieldName, int valueIndex) {
         switch (fieldName) {
         case "checkpoints": {
-            Cuboid cuboid = WorldEdit.getSelection(node.getContext().getPlayer());
+            Cuboid cuboid = Cuboid.selectionOf(node.getContext().getPlayer());
             if (cuboid == null) throw new EditMenuException("No selection!");
             node.getContext().getPlayer().sendMessage(text("New checkpoint: " + cuboid, GREEN));
             return cuboid;
@@ -93,7 +95,7 @@ public final class Tag implements EditMenuAdapter {
         case "startVectors":
         case "goodies":
         case "coins": {
-            Cuboid cuboid = WorldEdit.getSelection(node.getContext().getPlayer());
+            Cuboid cuboid = Cuboid.selectionOf(node.getContext().getPlayer());
             if (cuboid == null) {
                 throw new EditMenuException("No selection!");
             }
@@ -124,7 +126,7 @@ public final class Tag implements EditMenuAdapter {
 
                     @Override public void onClick(Player player, ClickType click) {
                         if (click.isLeftClick()) {
-                            Cuboid cuboid = WorldEdit.getSelection(player);
+                            Cuboid cuboid = Cuboid.selectionOf(player);
                             if (cuboid == null) throw new EditMenuException("No selection!");
                             startVectors.clear();
                             startVectors.addAll(cuboid.enumerate());

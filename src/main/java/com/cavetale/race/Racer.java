@@ -1,5 +1,6 @@
 package com.cavetale.race;
 
+import com.cavetale.core.struct.Vec3i;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
