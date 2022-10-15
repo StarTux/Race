@@ -762,6 +762,9 @@ public final class Race {
         player.teleport(loc);
         player.sendActionBar(text("Returned to last checkpoint!", LIGHT_PURPLE));
         player.playSound(loc, Sound.ENTITY_ENDER_PEARL_THROW, SoundCategory.MASTER, 0.5f, 1.0f);
+        if (tag.type == RaceType.BROOM) {
+            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).startFlying(player);
+        }
     }
 
     public long getTime() {
