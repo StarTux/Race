@@ -297,8 +297,8 @@ public final class Race {
 
     protected void updateVehicleSpeed(Player player, Racer racer) {
         if (tag.type == RaceType.BROOM) {
-            double factor = 0.75 * ((double) racer.coins / (double) MAX_COINS);
-            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setSpeedFactor(1.0 + factor);
+            double factor = ((double) racer.coins / (double) MAX_COINS);
+            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setSpeedFactor(1.25 + 0.75 * factor);
         } else if (player.getVehicle() instanceof Attributable attributable) {
             AttributeInstance inst = attributable.getAttribute(GENERIC_MOVEMENT_SPEED);
             if (inst == null) return;
