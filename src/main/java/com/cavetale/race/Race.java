@@ -356,11 +356,14 @@ public final class Race {
                 }
                 player.showTitle(Title.title(text("#" + (racer.finishIndex + 1), GREEN),
                                              text(formatTime(racer.finishTime), GREEN),
-                                             times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(500))));
+                                             times(Duration.ofMillis(500), Duration.ofSeconds(2), Duration.ofMillis(500))));
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 2.0f);
                 for (Player target : getPresentPlayers()) {
+                    target.sendMessage("");
                     target.sendMessage(ChatColor.GREEN + player.getName()
                                        + " finished #" + (racer.finishIndex + 1)
                                        + " in " + formatTime(racer.finishTime));
+                    target.sendMessage("");
                 }
                 player.setGameMode(GameMode.SPECTATOR);
                 player.setWalkSpeed(0.2f);
