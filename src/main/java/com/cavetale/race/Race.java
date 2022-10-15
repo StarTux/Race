@@ -66,7 +66,7 @@ public final class Race {
     protected final Tag tag;
     protected Map<Vec3i, Goody> goodies = new HashMap<>();
     protected Map<Vec3i, Goody> coins = new HashMap<>();
-    public static final int MAX_COINS = 20;
+    public static final int MAX_COINS = 50;
 
     public void onDisable() {
         for (Racer racer : tag.racers) {
@@ -139,6 +139,7 @@ public final class Race {
                 }
                 if (tag.type == RaceType.BROOM) {
                     player.getInventory().addItem(Mytems.WITCH_BROOM.createItemStack());
+                    ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).startFlying(player);
                 }
             }
             return;
@@ -276,6 +277,7 @@ public final class Race {
     }
 
     private void onTouchCoin(Player player, Racer racer, Vec3i vector) {
+        if (racer.coins >= MAX_COINS) return;
         Goody coin = coins.get(vector);
         if (coin == null || coin.entity == null || coin.cooldown > 0) return;
         Location loc = coin.entity.getLocation();
@@ -295,8 +297,8 @@ public final class Race {
 
     protected void updateVehicleSpeed(Player player, Racer racer) {
         if (tag.type == RaceType.BROOM) {
-            double factor = 0.5 * ((double) racer.coins / (double) MAX_COINS);
-            WitchBroom.getSessionData(player).setSpeedFactor(1.0 + factor);
+            double factor = 0.75 * ((double) racer.coins / (double) MAX_COINS);
+            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setSpeedFactor(1.0 + factor);
         } else if (player.getVehicle() instanceof Attributable attributable) {
             AttributeInstance inst = attributable.getAttribute(GENERIC_MOVEMENT_SPEED);
             if (inst == null) return;
@@ -321,6 +323,10 @@ public final class Race {
 
     private void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
+        if (tag.type == RaceType.BROOM) {
+            racer.coins = Math.max(0, racer.coins - 5);
+            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setFlyTicks(0);
+        }
         if (racer.checkpointIndex >= tag.checkpoints.size()) {
             racer.checkpointIndex = 0;
             racer.lap += 1;
