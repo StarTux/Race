@@ -72,6 +72,7 @@ public final class RacePlugin extends JavaPlugin {
 
     protected void load() {
         save = Json.load(saveFile, Save.class, Save::new);
+        if (save == null) save = new Save();
     }
 
     protected void save() {

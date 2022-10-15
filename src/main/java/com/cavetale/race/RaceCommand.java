@@ -128,7 +128,6 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
                         CommandArgCompleter.integer(i -> true))
             .description("Modify player score")
             .senderCaller(this::scoreAdd);
-        plugin.getCommand("race").setExecutor(this);
     }
 
     private Race requireRace(Player player) {
@@ -465,21 +464,29 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         case "add": {
             if (args.length != 1 && args.length != 4) return false;
             Race race = requireRace(player);
-            int dx = 0;
-            int dy = 0;
-            int dz = 0;
             if (args.length >= 2) {
-                dx = requireInt(args[1]);
-                dy = requireInt(args[2]);
-                dz = requireInt(args[3]);
+                Vec3i vec = new Vec3i(requireInt(args[1]),
+                                      requireInt(args[2]),
+                                      requireInt(args[3]));
+                if (race.tag.coins.contains(vec)) {
+                    throw new CommandWarn("Coin already exists: " + vec);
+                }
+                race.tag.coins.add(vec);
+                race.save();
+                player.sendMessage(ChatColor.YELLOW + "Coin added: " + vec);
+            } else {
+                int count = 0;
+                for (Vec3i vec : Cuboid.requireSelectionOf(player).enumerate()) {
+                    if (race.tag.coins.contains(vec)) {
+                        continue;
+                    } else {
+                        race.tag.coins.add(vec);
+                        count += 1;
+                    }
+                }
+                if (count > 0) race.save();
+                player.sendMessage(ChatColor.YELLOW + "Coins added: " + count);
             }
-            Vec3i vec = Cuboid.requireSelectionOf(player).getMin().add(dx, dy, dz);
-            if (race.tag.coins.contains(vec)) {
-                throw new CommandWarn("Coin already exists: " + vec);
-            }
-            race.tag.coins.add(vec);
-            race.save();
-            player.sendMessage(ChatColor.YELLOW + "Coin added: " + vec);
             return true;
         }
         case "remove": {

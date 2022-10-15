@@ -6,6 +6,7 @@ import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
+import com.cavetale.mytems.item.medieval.WitchBroom;
 import com.cavetale.race.util.Rnd;
 import java.io.File;
 import java.time.Duration;
@@ -37,6 +38,7 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
@@ -136,7 +138,7 @@ public final class Race {
                     player.getInventory().setChestplate(new ItemStack(Material.ELYTRA));
                 }
                 if (tag.type == RaceType.BROOM) {
-                    player.getInventory().setItem(0, Mytems.WITCH_BROOM.createItemStack());
+                    player.getInventory().addItem(Mytems.WITCH_BROOM.createItemStack());
                 }
             }
             return;
@@ -286,14 +288,16 @@ public final class Race {
 
     protected void setCoins(Player player, Racer racer, int value) {
         racer.coins = value;
-        updateVehicleSpeed(player, racer, player.getVehicle());
+        updateVehicleSpeed(player, racer);
     }
 
     private static final UUID SPEED_BONUS_UUID = UUID.fromString("5209c14a-7d9c-41e9-858a-2b6da987486a");
 
-    protected void updateVehicleSpeed(Player player, Racer racer, Entity vehicle) {
-        if (vehicle == null) return;
-        if (vehicle instanceof Attributable attributable) {
+    protected void updateVehicleSpeed(Player player, Racer racer) {
+        if (tag.type == RaceType.BROOM) {
+            double factor = 0.5 * ((double) racer.coins / (double) MAX_COINS);
+            WitchBroom.getSessionData(player).setSpeedFactor(1.0 + factor);
+        } else if (player.getVehicle() instanceof Attributable attributable) {
             AttributeInstance inst = attributable.getAttribute(GENERIC_MOVEMENT_SPEED);
             if (inst == null) return;
             for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
@@ -317,7 +321,6 @@ public final class Race {
 
     private void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
-        racer.checkpointDistanceIncreaseTicks = 0;
         if (racer.checkpointIndex >= tag.checkpoints.size()) {
             racer.checkpointIndex = 0;
             racer.lap += 1;
@@ -401,26 +404,15 @@ public final class Race {
             if (player == null) continue;
             Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
             Entity vehicle = player.getVehicle();
-            Location loc = vehicle != null
+            Location loc = vehicle != null && vehicle.getType() != EntityType.ARMOR_STAND
                 ? vehicle.getLocation()
                 : player.getLocation();
             passThroughBlock(player, racer, loc.getBlock());
             try {
                 Cuboid cp = tag.checkpoints.get(racer.checkpointIndex);
                 Vec3i pos = Vec3i.of(loc.getBlock());
-                int oldCheckpointDistance = racer.checkpointDistance;
                 Vec3i center = cp.getCenter();
                 racer.checkpointDistance = pos.distanceSquared(center);
-                if (racer.checkpointDistance > oldCheckpointDistance) {
-                    racer.checkpointDistanceIncreaseTicks += 1;
-                } else if (racer.checkpointDistance < oldCheckpointDistance) {
-                    racer.checkpointDistanceIncreaseTicks = 0;
-                }
-                if (racer.checkpointDistanceIncreaseTicks >= 10 && (tag.phaseTicks % 20) == 0) {
-                    player.showTitle(Title.title(text("Reverse", RED),
-                                                 text("Turn Around", RED),
-                                                 times(Duration.ZERO, Duration.ofMillis(750), Duration.ZERO)));
-                }
                 if ((ticks % 20) == 0) {
                     List<Vec3i> vecs = cp.enumerate();
                     Location particleLocation = Rnd.pick(vecs).toLocation(getWorld()).add(0.0, 0.5, 0.0);
@@ -458,7 +450,7 @@ public final class Race {
                         vehicle = tag.type.spawnVehicle(player.getLocation());
                         if (vehicle != null) {
                             vehicle.addPassenger(player);
-                            updateVehicleSpeed(player, racer, vehicle);
+                            updateVehicleSpeed(player, racer);
                         }
                     }
                 }
@@ -474,6 +466,9 @@ public final class Race {
                         }
                     }
                 }
+            }
+            if (tag.type == RaceType.BROOM && player.getVehicle() != null) {
+                updateVehicleSpeed(player, racer);
             }
         }
         Collections.sort(tag.racers);
@@ -627,7 +622,7 @@ public final class Race {
             player.sendMessage(text("You joined the race!", GREEN));
             player.sendActionBar(text("You joined the race!", GREEN));
             clearInventory(player);
-            player.getInventory().addItem(GoodyItem.WAYPOINT.createItemStack());
+            player.getInventory().setItem(7, GoodyItem.WAYPOINT.createItemStack());
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(getStartLocation(racer));
             player.setAllowFlight(true);
