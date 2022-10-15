@@ -135,6 +135,9 @@ public final class Race {
                 if (tag.type == RaceType.ELYTRA) {
                     player.getInventory().setChestplate(new ItemStack(Material.ELYTRA));
                 }
+                if (tag.type == RaceType.BROOM) {
+                    player.getInventory().setItem(0, Mytems.WITCH_BROOM.createItemStack());
+                }
             }
             return;
         }
