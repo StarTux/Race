@@ -1,12 +1,12 @@
 package com.cavetale.race;
 
+import com.cavetale.area.struct.Area;
+import com.cavetale.area.struct.AreasFile;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.SQLTrophy;
 import com.cavetale.fam.trophy.Trophies;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
-import com.cavetale.race.struct.Area;
-import com.cavetale.race.struct.AreasFile;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,7 +89,7 @@ public final class RacePlugin extends JavaPlugin {
         Location spawnLocation = world.getSpawnLocation();
         List<UUID> uuids = save.rankScores();
         int winnerIndex = 0;
-        for (Area area : areasFile.getAreas().getWinner()) {
+        for (Area area : areasFile.getAreas().get("winner")) {
             int index = winnerIndex++;
             if (uuids.size() <= index) break;
             UUID uuid = uuids.get(index);
@@ -104,7 +104,7 @@ public final class RacePlugin extends JavaPlugin {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " GrandPrix");
             }
         }
-        for (Area area : areasFile.getAreas().getViewer()) {
+        for (Area area : areasFile.getAreas().get("viewer")) {
             List<Vec3i> viewerVecs = area.enumerate();
             Collections.shuffle(viewerVecs);
             int viewerIndex = 0;
