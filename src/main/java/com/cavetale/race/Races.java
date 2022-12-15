@@ -27,6 +27,10 @@ public final class Races {
                 continue;
             }
             Race race = new Race(plugin, name, tag);
+            if (tag.fix()) {
+                plugin.getLogger().info("Race fixed: " + name);
+                race.save();
+            }
             races.add(race);
         }
     }

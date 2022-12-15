@@ -105,8 +105,8 @@ public final class Race {
         World world = getWorld();
         tag.area.highlight(world, ticks, 4, 1, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         tag.spawnArea.highlight(world, ticks, 4, 4, loc -> world.spawnParticle(Particle.VILLAGER_HAPPY, loc, 1, 0.0, 0.0, 0.0, 0.0));
-        for (Cuboid area : tag.checkpoints) {
-            area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
+        for (Checkpoint checkpoint : tag.checkpoints) {
+            checkpoint.area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         }
         for (Vec3i v : tag.startVectors) {
             Location loc = v.toLocation(getWorld());
@@ -192,8 +192,8 @@ public final class Race {
     private void passThroughBlock(Player player, Racer racer, Block block) {
         if (racer.finished) return;
         Vec3i vec = Vec3i.of(block);
-        Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
-        if (contains2(checkpoint, vec)) {
+        Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+        if (contains2(checkpoint.area, vec)) {
             progressCheckpoint(player, racer);
             if (!racer.finished) {
                 checkpoint = tag.checkpoints.get(racer.checkpointIndex);
@@ -411,19 +411,18 @@ public final class Race {
             if (racer.finished) continue;
             Player player = racer.getPlayer();
             if (player == null) continue;
-            Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
             Entity vehicle = player.getVehicle();
             Location loc = vehicle != null && vehicle.getType() != EntityType.ARMOR_STAND
                 ? vehicle.getLocation()
                 : player.getLocation();
             passThroughBlock(player, racer, loc.getBlock());
             try {
-                Cuboid cp = tag.checkpoints.get(racer.checkpointIndex);
+                Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
                 Vec3i pos = Vec3i.of(loc.getBlock());
-                Vec3i center = cp.getCenter();
+                Vec3i center = checkpoint.area.getCenter();
                 racer.checkpointDistance = pos.distanceSquared(center);
                 if ((ticks % 20) == 0) {
-                    List<Vec3i> vecs = cp.enumerate();
+                    List<Vec3i> vecs = checkpoint.area.enumerate();
                     Location particleLocation = Rnd.pick(vecs).toLocation(getWorld()).add(0.0, 0.5, 0.0);
                     player.spawnParticle(Particle.FIREWORKS_SPARK, particleLocation, 20, 0.0, 0.0, 0.0, 0.2);
                 }
@@ -487,9 +486,9 @@ public final class Race {
         updateGoodies();
     }
 
-    private void setupCheckpoint(Racer racer, Cuboid checkpoint) {
+    private void setupCheckpoint(Racer racer, Checkpoint checkpoint) {
         racer.checkpointIndex = tag.checkpoints.indexOf(checkpoint);
-        Vec3i center = checkpoint.getCenter();
+        Vec3i center = checkpoint.area.getCenter();
         Vec3i pos = Vec3i.of(racer.getPlayer().getLocation().getBlock());
         racer.checkpointDistance = pos.distanceSquared(center);
         Player player = racer.getPlayer();
@@ -578,11 +577,11 @@ public final class Race {
         tag.spawnArea = area;
     }
 
-    public List<Cuboid> getCheckpoints() {
+    public List<Checkpoint> getCheckpoints() {
         return new ArrayList<>(tag.checkpoints);
     }
 
-    public void setCheckpoints(List<Cuboid> checkpoints) {
+    public void setCheckpoints(List<Checkpoint> checkpoints) {
         tag.checkpoints = new ArrayList<>(checkpoints);
     }
 
@@ -601,8 +600,8 @@ public final class Race {
 
     private Location getStartLocation(Racer racer) {
         Vec3i vector = racer.startVector;
-        Cuboid firstCheckpoint = tag.checkpoints.get(0);
-        float yaw = Yaw.yaw(vector, firstCheckpoint);
+        Checkpoint firstCheckpoint = tag.checkpoints.get(0);
+        float yaw = Yaw.yaw(vector, firstCheckpoint.area);
         Location location = vector.toLocation(getWorld());
         location.setYaw(yaw);
         return location;
@@ -616,7 +615,7 @@ public final class Race {
 
     public void startRace() {
         tag.racers.clear();
-        Vec3i center = tag.checkpoints.get(0).getCenter();
+        Vec3i center = tag.checkpoints.get(0).area.getCenter();
         Collections.sort(tag.startVectors, (a, b) -> Integer.compare(simpleDistance(center, a),
                                                                      simpleDistance(center, b)));
         int startVectorIndex = 0;
@@ -720,7 +719,7 @@ public final class Race {
         clearGoodies();
     }
 
-    public Cuboid getLastCheckpoint(Racer racer) {
+    public Checkpoint getLastCheckpoint(Racer racer) {
         if (racer.checkpointIndex == 0) return tag.checkpoints.get(tag.checkpoints.size() - 1);
         if (racer.checkpointIndex > tag.checkpoints.size()) return tag.checkpoints.get(0);
         return tag.checkpoints.get(racer.checkpointIndex - 1);
@@ -744,12 +743,12 @@ public final class Race {
     public void teleportToLastCheckpoint(Player player) {
         Racer racer = getRacer(player);
         if (racer == null) return;
-        Cuboid checkpoint = getLastCheckpoint(racer);
+        Checkpoint checkpoint = getLastCheckpoint(racer);
         Location loc;
-        if (checkpoint.equals(Cuboid.ZERO)) {
+        if (checkpoint.area.equals(Cuboid.ZERO)) {
             loc = racer.startVector.toLocation(getWorld());
         } else {
-            Block block = getBottomBlock(checkpoint, getWorld());
+            Block block = getBottomBlock(checkpoint.area, getWorld());
             while (!block.isPassable()) block = block.getRelative(0, 1, 0);
             loc = block.getLocation().add(0.5, 0.0, 0.5);
         }
@@ -790,7 +789,7 @@ public final class Race {
         double length = direction.length();
         if (length < 0.01) return;
         BlockIterator iter = new BlockIterator(from.getWorld(), from.toVector(), direction.normalize(), 0.0, 0);
-        Cuboid checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+        Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
         int count = 0;
         Block end = to.getBlock();
         while (iter.hasNext()) {
@@ -887,11 +886,11 @@ public final class Race {
         if (world == null) return;
         final int radius = 8;
         HashSet<Vec2i> chunksToLoad = new HashSet<>();
-        for (Cuboid cuboid : tag.checkpoints) {
-            int ax = (cuboid.getAx() >> 4) - radius;
-            int bx = (cuboid.getBx() >> 4) + radius;
-            int az = (cuboid.getAz() >> 4) - radius;
-            int bz = (cuboid.getBz() >> 4) + radius;
+        for (Checkpoint checkpoint : tag.checkpoints) {
+            int ax = (checkpoint.area.getAx() >> 4) - radius;
+            int bx = (checkpoint.area.getBx() >> 4) + radius;
+            int az = (checkpoint.area.getAz() >> 4) - radius;
+            int bz = (checkpoint.area.getBz() >> 4) + radius;
             for (int z = az; z <= bz; z += 1) {
                 for (int x = ax; x <= bx; x += 1) {
                     chunksToLoad.add(new Vec2i(x, z));

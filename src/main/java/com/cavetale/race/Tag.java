@@ -40,9 +40,8 @@ public final class Tag implements EditMenuAdapter {
     protected Set<Vec3i> coins = new HashSet<>();
     @EditMenuItem(description = "Mostly unused")
     protected Cuboid spawnArea = Cuboid.ZERO;
-    @EditMenuItem(description = "Racers must touch checkpoints on after the other."
-                  + " Their size does not matter.")
-    protected List<Cuboid> checkpoints = new ArrayList<>();
+    @EditMenuItem(description = "Racers must touch checkpoints on after the other.")
+    protected List<Checkpoint> checkpoints = new ArrayList<>();
     @EditMenuItem(description = "How many laps to race."
                   + " Laps greater than one requires that"
                   + " the first checkpoint is reachable from the last.")
@@ -178,5 +177,13 @@ public final class Tag implements EditMenuAdapter {
                     }
                 },
             });
+    }
+
+    public boolean fix() {
+        boolean result = false;
+        for (Checkpoint checkpoint : checkpoints) {
+            if (checkpoint.fix()) result = true;
+        }
+        return result;
     }
 }

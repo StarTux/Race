@@ -243,11 +243,11 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        List<Cuboid> checkpoints = race.getCheckpoints();
+        List<Checkpoint> checkpoints = race.getCheckpoints();
         context.message("" + ChatColor.YELLOW + race.name + ": " + checkpoints.size() + " checkpoint(s)");
         int i = 0;
-        for (Cuboid cuboid : checkpoints) {
-            context.message("  " + (i++) + " " + ChatColor.YELLOW + cuboid);
+        for (Checkpoint checkpoint : checkpoints) {
+            context.message("  " + (i++) + " " + ChatColor.YELLOW + checkpoint);
         }
         return true;
     }
@@ -257,14 +257,14 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         Player player = context.requirePlayer();
         Race race = requireRace(player);
         Cuboid cuboid = Cuboid.requireSelectionOf(player);
-        List<Cuboid> checkpoints = race.getCheckpoints();
+        List<Checkpoint> checkpoints = race.getCheckpoints();
         int index = args.length == 0
             ? checkpoints.size()
             : requireInt(args[0]);
         if (index < 0 || index > checkpoints.size()) {
             throw new CommandWarn("Invalid index: " + index);
         }
-        checkpoints.add(index, cuboid);
+        checkpoints.add(index, new Checkpoint(cuboid));
         race.setCheckpoints(checkpoints);
         race.save();
         context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint added: " + cuboid);
@@ -275,11 +275,11 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 0) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        List<Cuboid> checkpoints = race.getCheckpoints();
-        for (Cuboid cuboid : checkpoints) {
-            if (cuboid.contains(player.getLocation())) {
-                int index = checkpoints.indexOf(cuboid);
-                context.message(ChatColor.YELLOW + "This is checkpoint #" + index + " " + cuboid);
+        List<Checkpoint> checkpoints = race.getCheckpoints();
+        for (Checkpoint checkpoint : checkpoints) {
+            if (checkpoint.area.contains(player.getLocation())) {
+                int index = checkpoints.indexOf(checkpoint);
+                context.message(ChatColor.YELLOW + "This is checkpoint #" + index + " " + checkpoint);
             }
         }
         return true;
@@ -289,7 +289,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 2) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        List<Cuboid> checkpoints = race.getCheckpoints();
+        List<Checkpoint> checkpoints = race.getCheckpoints();
         int indexA = requireInt(args[0]);
         int indexB = requireInt(args[1]);
         if (indexA < 0 || indexA >= checkpoints.size()) {
@@ -298,8 +298,8 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (indexB < 0 || indexB >= checkpoints.size()) {
             throw new CommandWarn("Out of bounds: " + indexB);
         }
-        Cuboid a = checkpoints.get(indexA);
-        Cuboid b = checkpoints.get(indexB);
+        Checkpoint a = checkpoints.get(indexA);
+        Checkpoint b = checkpoints.get(indexB);
         checkpoints.set(indexA, b);
         checkpoints.set(indexB, a);
         race.setCheckpoints(checkpoints);
@@ -312,12 +312,12 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 1) return false;
         Player player = context.requirePlayer();
         Race race = requireRace(player);
-        List<Cuboid> checkpoints = race.getCheckpoints();
+        List<Checkpoint> checkpoints = race.getCheckpoints();
         int index = requireInt(args[0]);
         if (index < 0 || index >= checkpoints.size()) {
             throw new CommandWarn("Out of bounds: " + index);
         }
-        Cuboid old = checkpoints.remove(index);
+        Checkpoint old = checkpoints.remove(index);
         race.setCheckpoints(checkpoints);
         race.save();
         context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint #" + index + " removed: " + old);
