@@ -35,6 +35,12 @@ public final class Races {
         }
     }
 
+    public void onEnable() {
+        for (Race race : races) {
+            race.onEnable();
+        }
+    }
+
     public void onDisable() {
         for (Race race : races) {
             race.onDisable();

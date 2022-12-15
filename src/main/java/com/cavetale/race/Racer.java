@@ -24,6 +24,7 @@ public final class Racer implements Comparable<Racer> {
     protected boolean racing = false;
     protected int rank = 0;
     protected long goodyCooldown = 0L;
+    protected long coinCooldown = 0L;
     protected int coins = 0;
     protected int invincibleTicks = 0;
 

@@ -49,6 +49,7 @@ public final class RacePlugin extends JavaPlugin {
         raceCommand.enable();
         eventListener.enable();
         races.load();
+        races.onEnable();
         load();
         getServer().getScheduler().runTaskTimer(this, this::onTick, 1, 1);
     }

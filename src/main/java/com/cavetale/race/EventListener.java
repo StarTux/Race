@@ -10,6 +10,7 @@ import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.mytems.item.trophy.TrophyType;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
+import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -103,7 +104,8 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (!plugin.races.isRace(event.getEntity().getLocation())) return;
+        Race race = plugin.races.at(event.getPlayer().getLocation());
+        if (race != null) race.onPlayerDeath(event.getPlayer(), event);
     }
 
     // Respawn at world spawn
@@ -112,7 +114,7 @@ public final class EventListener implements Listener {
         Player player = event.getPlayer();
         Race race = plugin.races.at(player.getLocation());
         if (race == null) return;
-        event.setRespawnLocation(race.getSpawnLocation());
+        race.onPlayerRespawn(player, event);
     }
 
     // No item damage
@@ -302,6 +304,14 @@ public final class EventListener implements Listener {
         if (race == null) return;
         Player player = event.getPlayer();
         race.onMoveFromTo(player, event.getFrom(), event.getTo());
+    }
+
+    @EventHandler
+    public void onPlayerJump(PlayerJumpEvent event) {
+        Race race = plugin.races.at(event.getFrom());
+        if (race == null) return;
+        Player player = event.getPlayer();
+        race.onPlayerJump(player, event);
     }
 
     @EventHandler

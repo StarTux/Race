@@ -53,12 +53,14 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         rootNode.addChild("debug")
             .caller(this::debug)
             .description("Debug command");
-        rootNode.addChild("type")
-            .caller(this::type)
-            .description("Change race type");
-        rootNode.addChild("laps")
-            .caller(this::laps)
-            .description("Change lap number");
+        rootNode.addChild("type").arguments("<type>")
+            .description("Change race type")
+            .completers(CommandArgCompleter.enumLowerList(RaceType.class))
+            .caller(this::type);
+        rootNode.addChild("laps").arguments("<laps>")
+            .completers(CommandArgCompleter.integer(i -> i > 0))
+            .description("Change lap number")
+            .caller(this::laps);
         rootNode.addChild("editor")
             .playerCaller(this::editor);
         CommandNode checkpointNode = rootNode.addChild("checkpoint")
@@ -485,20 +487,20 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
                     }
                 }
                 if (count > 0) race.save();
-                player.sendMessage(ChatColor.YELLOW + "Coins added: " + count);
+                player.sendMessage(text("Coins added: " + count, YELLOW));
             }
             return true;
         }
         case "remove": {
             if (args.length != 1) return false;
             Race race = requireRace(player);
-            Vec3i vec = Cuboid.requireSelectionOf(player).getMin();
-            if (!race.tag.coins.contains(vec)) {
-                throw new CommandWarn("No coin here: " + vec);
+            Cuboid cuboid = Cuboid.requireSelectionOf(player);
+            if (!race.tag.coins.removeAll(cuboid.enumerate())) {
+                throw new CommandWarn("No coins here: " + cuboid);
             }
-            race.tag.coins.remove(vec);
+            race.clearGoodies();
             race.save();
-            player.sendMessage(ChatColor.YELLOW + "Coin removed: " + vec);
+            player.sendMessage(text("Coins removed: " + cuboid, YELLOW));
             return true;
         }
         case "clear": {
@@ -507,7 +509,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
             int count = race.tag.coins.size();
             race.tag.coins.clear();
             if (count > 0) race.save();
-            player.sendMessage(ChatColor.YELLOW + "Coins cleared: " + count);
+            player.sendMessage(text("Coins cleared: " + count, YELLOW));
             return true;
         }
         default: return false;

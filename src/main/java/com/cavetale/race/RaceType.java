@@ -29,7 +29,9 @@ public enum RaceType implements EditMenuAdapter {
     HORSE(() -> new ItemStack(Material.IRON_HORSE_ARMOR)),
     PIG(() -> new ItemStack(Material.CARROT_ON_A_STICK)),
     ELYTRA(() -> new ItemStack(Material.ELYTRA)),
-    BROOM(Mytems.WITCH_BROOM::createIcon);
+    BROOM(Mytems.WITCH_BROOM::createIcon),
+    SONIC(Mytems.SNEAKERS::createIcon),
+    ;
 
     public final Supplier<ItemStack> iconSupplier;
 
@@ -48,6 +50,14 @@ public enum RaceType implements EditMenuAdapter {
 
     public boolean mountIsAlive() {
         return isMounted() && this != ICE_BOAT && this != BOAT;
+    }
+
+    public boolean playerIsDamageable() {
+        return this == RaceType.SONIC;
+    }
+
+    public boolean playerHasSpeed() {
+        return this == RaceType.SONIC;
     }
 
     protected Vehicle spawnVehicle(Location location) {
