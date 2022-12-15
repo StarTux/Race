@@ -498,7 +498,7 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
             if (!race.tag.coins.removeAll(cuboid.enumerate())) {
                 throw new CommandWarn("No coins here: " + cuboid);
             }
-            race.clearGoodies();
+            race.clearEntities();
             race.save();
             player.sendMessage(text("Coins removed: " + cuboid, YELLOW));
             return true;

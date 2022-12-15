@@ -24,7 +24,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Levelled;
-import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.EnderCrystal;
 import org.bukkit.entity.Entity;
@@ -129,11 +128,7 @@ public final class EventListener implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         Projectile proj = event.getEntity();
         Race race = plugin.races.at(proj.getLocation());
-        if (race == null) return;
-        if (proj instanceof AbstractArrow) {
-            proj.getWorld().createExplosion(proj, 3.0f);
-            proj.remove();
-        }
+        if (race != null) race.onProjectileHit(proj, event);
     }
 
     @EventHandler
@@ -146,8 +141,10 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent event) {
-        if (!plugin.races.isRace(event.getEntity().getLocation())) return;
+        Race race = plugin.races.at(event.getEntity().getLocation());
+        if (race == null) return;
         event.blockList().clear();
+        race.onEntityExplode(event.getEntity(), event);
     }
 
     @EventHandler

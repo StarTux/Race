@@ -10,6 +10,7 @@ import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
 import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.item.medieval.WitchBroom;
+import com.cavetale.mytems.util.Entities;
 import com.cavetale.race.util.Rnd;
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import java.io.File;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
@@ -41,17 +43,23 @@ import org.bukkit.attribute.Attributable;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
+import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Skeleton;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
@@ -81,6 +89,8 @@ public final class Race {
     protected final Tag tag;
     protected Map<Vec3i, Goody> goodies = new HashMap<>();
     protected Map<Vec3i, Goody> coins = new HashMap<>();
+    protected Map<Vec3i, Bogey> creepers = new HashMap<>();
+    protected Map<Vec3i, Bogey> skeletons = new HashMap<>();
     public static final int MAX_COINS = 100;
 
     public void onEnable() {
@@ -101,7 +111,11 @@ public final class Race {
                 player.getVehicle().remove();
             }
         }
-        clearGoodies();
+        clearEntities();
+    }
+
+    private void log(String msg) {
+        plugin.getLogger().info("[" + name + "] " + msg);
     }
 
     protected void tick(int ticks) {
@@ -122,7 +136,7 @@ public final class Race {
     public void setPhase(final Phase phase) {
         tag.phase = phase;
         tag.phaseTicks = 0;
-        clearGoodies();
+        clearEntities();
     }
 
     private void tickEdit(int ticks) {
@@ -136,7 +150,7 @@ public final class Race {
             Location loc = v.toCenterFloorLocation(getWorld());
             loc.getWorld().spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0);
         }
-        updateGoodies();
+        updateEntities();
     }
 
     private void tickStart(int ticks) {
@@ -257,6 +271,7 @@ public final class Race {
         goody.cooldown = 40;
         Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
                 e.setPersistent(false);
+                Entities.setTransient(e);
                 e.setFireworkMeta(Fireworks.simpleFireworkMeta());
             });
         firework.detonate();
@@ -460,7 +475,7 @@ public final class Race {
         for (int i = 0; i < tag.racers.size(); i += 1) {
             tag.racers.get(i).rank = i;
         }
-        updateGoodies();
+        updateEntities();
     }
 
     private void tickRacer(Racer racer, int ticks) {
@@ -782,7 +797,7 @@ public final class Race {
         }
         tag.racers.clear();
         tag.phase = Phase.IDLE;
-        clearGoodies();
+        clearEntities();
     }
 
     private void resetSpeed(Player player) {
@@ -876,7 +891,7 @@ public final class Race {
         }
     }
 
-    protected void updateGoodies() {
+    protected void updateEntities() {
         for (Vec3i vector : tag.goodies) {
             Goody goody = goodies.computeIfAbsent(vector, v -> new Goody(v));
             if (goody.cooldown > 0) {
@@ -889,6 +904,7 @@ public final class Race {
                 if (!location.isChunkLoaded()) continue;
                 goody.entity = location.getWorld().spawn(location, ArmorStand.class, e -> {
                         e.setPersistent(false);
+                        Entities.setTransient(e);
                         e.setVisible(false);
                         e.setGravity(false);
                         e.setMarker(true);
@@ -913,6 +929,7 @@ public final class Race {
                 if (!location.isChunkLoaded()) continue;
                 coin.entity = location.getWorld().dropItem(location, Mytems.GOLDEN_COIN.createIcon(), e -> {
                         e.setPersistent(false);
+                        Entities.setTransient(e);
                         e.setGravity(false);
                         e.setCanPlayerPickup(false);
                         e.setCanMobPickup(false);
@@ -926,9 +943,94 @@ public final class Race {
                 item.setVelocity(new Vector().zero());
             }
         }
+        for (Cuboid cuboid : tag.creepers) {
+            Vec3i v = cuboid.getMin();
+            Vec3i w = cuboid.getMax();
+            Bogey bogey = creepers.computeIfAbsent(v, vv -> new Bogey(vv));
+            if (bogey.cooldown > 0) {
+                bogey.cooldown -= 1;
+                continue;
+            }
+            if (bogey.entity == null || bogey.entity.isDead()) {
+                bogey.entity = null;
+                final boolean backwards = ThreadLocalRandom.current().nextBoolean();
+                Location location = !backwards
+                    ? v.toCenterFloorLocation(getWorld())
+                    : w.toCenterFloorLocation(getWorld());
+                if (!location.isChunkLoaded()) continue;
+                bogey.entity = location.getWorld().spawn(location, Creeper.class, e -> {
+                        e.setPersistent(false);
+                        Entities.setTransient(e);
+                        e.setMaxFuseTicks(1);
+                    });
+                bogey.backwards = backwards;
+            } else if (bogey.entity instanceof Creeper creeper) {
+                if (creeper.getTarget() != null) {
+                    continue;
+                }
+                if (!bogey.backwards) {
+                    if (w.contains(creeper.getLocation())) {
+                        bogey.backwards = true;
+                    } else {
+                        creeper.getPathfinder().moveTo(w.toCenterFloorLocation(getWorld()));
+                    }
+                } else {
+                    if (v.contains(creeper.getLocation())) {
+                        bogey.backwards = false;
+                    } else {
+                        creeper.getPathfinder().moveTo(v.toCenterFloorLocation(getWorld()));
+                    }
+                }
+            }
+        }
+        for (Cuboid cuboid : tag.skeletons) {
+            Vec3i v = cuboid.getMin();
+            Vec3i w = cuboid.getMax();
+            Bogey bogey = skeletons.computeIfAbsent(v, vv -> new Bogey(vv));
+            if (bogey.cooldown > 0) {
+                bogey.cooldown -= 1;
+                continue;
+            }
+            if (bogey.entity == null || bogey.entity.isDead()) {
+                bogey.entity = null;
+                final boolean backwards = ThreadLocalRandom.current().nextBoolean();
+                Location location = !backwards
+                    ? v.toCenterFloorLocation(getWorld())
+                    : w.toCenterFloorLocation(getWorld());
+                if (!location.isChunkLoaded()) continue;
+                bogey.entity = location.getWorld().spawn(location, Skeleton.class, e -> {
+                        e.setPersistent(false);
+                        Entities.setTransient(e);
+                        e.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
+                        e.getEquipment().setChestplate(null);
+                        e.getEquipment().setLeggings(null);
+                        e.getEquipment().setBoots(null);
+                        e.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
+                        e.setShouldBurnInDay(false);
+                    });
+                bogey.backwards = backwards;
+            } else if (bogey.entity instanceof Skeleton skeleton) {
+                if (skeleton.getTarget() != null) {
+                    continue;
+                }
+                if (!bogey.backwards) {
+                    if (w.contains(skeleton.getLocation())) {
+                        bogey.backwards = true;
+                    } else {
+                        skeleton.getPathfinder().moveTo(w.toCenterFloorLocation(getWorld()));
+                    }
+                } else {
+                    if (v.contains(skeleton.getLocation())) {
+                        bogey.backwards = false;
+                    } else {
+                        skeleton.getPathfinder().moveTo(v.toCenterFloorLocation(getWorld()));
+                    }
+                }
+            }
+        }
     }
 
-    protected void clearGoodies() {
+    protected void clearEntities() {
         for (Goody goody : goodies.values()) {
             if (goody.entity != null) {
                 goody.entity.remove();
@@ -943,6 +1045,20 @@ public final class Race {
             }
         }
         coins.clear();
+        for (Bogey bogey : creepers.values()) {
+            if (bogey.entity != null) {
+                bogey.entity.remove();
+                bogey.entity = null;
+            }
+        }
+        creepers.clear();
+        for (Bogey bogey : skeletons.values()) {
+            if (bogey.entity != null) {
+                bogey.entity.remove();
+                bogey.entity = null;
+            }
+        }
+        skeletons.clear();
     }
 
     public RaceType getRaceType() {
@@ -973,14 +1089,14 @@ public final class Race {
                 }
             }
         }
-        plugin.getLogger().info("[" + name + "] Creating " + chunksToLoad.size() + " chunk tickets...");
+        log("Creating " + chunksToLoad.size() + " chunk tickets...");
         int count = 0;
         for (Vec2i vec : chunksToLoad) {
             if (world.addPluginChunkTicket(vec.x, vec.z, plugin)) {
                 count += 1;
             }
         }
-        plugin.getLogger().info("[" + name + "] " + count + "/" + chunksToLoad.size() + " chunk tickets created!");
+        log("" + count + "/" + chunksToLoad.size() + " chunk tickets created!");
     }
 
     protected void unloadAllRaceChunks() {
@@ -1185,8 +1301,31 @@ public final class Race {
 
     protected void onPlayerJump(Player player, PlayerJumpEvent jump) {
         if (tag.phase == Phase.IDLE) return;
+        Racer racer = getRacer(player);
+        if (racer == null || !racer.racing) return;
         if (tag.type == RaceType.SONIC) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 15, 1, true, false, true));
+        }
+    }
+
+    protected void onEntityExplode(Entity entity, EntityExplodeEvent event) {
+        for (Bogey bogey : creepers.values()) {
+            if (entity.equals(bogey.entity)) {
+                bogey.cooldown = 20 * 30;
+                break;
+            }
+        }
+    }
+
+    protected void onProjectileHit(Projectile proj, ProjectileHitEvent event) {
+        if (proj instanceof AbstractArrow arrow) {
+            if (arrow.getShooter() instanceof Player) {
+                proj.getWorld().createExplosion(proj, 3.0f);
+                proj.remove();
+            } else if (event.getHitEntity() != null && !(event.getHitEntity() instanceof Player)) {
+                event.setCancelled(true);
+                proj.remove();
+            }
         }
     }
 }

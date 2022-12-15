@@ -48,6 +48,8 @@ public final class Tag implements EditMenuAdapter {
     protected int laps = 1;
     @EditMenuItem(description = "Race duration in seconds. 0 disables timeout.")
     protected long maxDuration = 0; // seconds
+    protected List<Cuboid> creepers = new ArrayList<>();
+    protected List<Cuboid> skeletons = new ArrayList<>();
     // Racing
     @EditMenuItem(settable = false, description = "ONLY USED FOR RACING")
     protected Phase phase = Phase.IDLE;
@@ -104,6 +106,15 @@ public final class Tag implements EditMenuAdapter {
             Vec3i result = cuboid.getMin();
             node.getContext().getPlayer().sendMessage(text("New vector: " + result, GREEN));
             return result;
+        }
+        case "creepers":
+        case "skeletons": {
+            Cuboid cuboid = Cuboid.selectionOf(node.getContext().getPlayer());
+            if (cuboid == null) {
+                throw new EditMenuException("No selection!");
+            }
+            node.getContext().getPlayer().sendMessage(text("New creeper: " + cuboid, GREEN));
+            return cuboid;
         }
         default: return null;
         }
@@ -172,7 +183,7 @@ public final class Tag implements EditMenuAdapter {
                         if (click.isLeftClick()) {
                             Race race = RacePlugin.instance.races.at(player.getLocation());
                             if (race == null) return;
-                            race.clearGoodies();
+                            race.clearEntities();
                         }
                     }
                 },
