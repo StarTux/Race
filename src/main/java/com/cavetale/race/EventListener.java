@@ -1,14 +1,14 @@
 package com.cavetale.race;
 
 import com.cavetale.core.connect.NetworkServer;
+import com.cavetale.core.event.hud.PlayerHudEvent;
+import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.mytems.item.trophy.TrophyType;
-import com.cavetale.sidebar.PlayerSidebarEvent;
-import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import java.util.ArrayList;
@@ -165,7 +165,7 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerSidebar(PlayerSidebarEvent event) {
+    public void onPlayerHud(PlayerHudEvent event) {
         Player player = event.getPlayer();
         if (player.getGameMode() == GameMode.SPECTATOR) {
             if (player.getSpectatorTarget() instanceof Player) {
@@ -180,13 +180,14 @@ public final class EventListener implements Listener {
             }
         } else {
             race.sidebar(player, lines);
+            race.onPlayerHud(player, event);
         }
         if (!lines.isEmpty()) {
-            event.add(plugin, Priority.HIGHEST, lines);
+            event.sidebar(PlayerHudPriority.HIGHEST, lines);
         }
     }
 
-    private void eventSidebar(Player player, PlayerSidebarEvent event, List<Component> lines) {
+    private void eventSidebar(Player player, PlayerHudEvent event, List<Component> lines) {
         List<UUID> uuids = plugin.save.rankScores();
         lines.add(join(noSeparators(), Mytems.GOLDEN_CUP.component, text("Grand Prix", GOLD), Mytems.GOLDEN_CUP.component));
         int playerScore = plugin.save.scores.getOrDefault(player.getUniqueId(), 0);

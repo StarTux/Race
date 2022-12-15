@@ -1,11 +1,14 @@
 package com.cavetale.race;
 
+import com.cavetale.core.event.hud.PlayerHudEvent;
+import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
+import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.item.medieval.WitchBroom;
 import com.cavetale.race.util.Rnd;
 import java.io.File;
@@ -20,6 +23,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
@@ -52,9 +56,14 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
+import static com.cavetale.core.font.Unicode.subscript;
+import static com.cavetale.core.font.Unicode.superscript;
+import static com.cavetale.core.font.Unicode.tiny;
 import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
-import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.Component.textOfChildren;
+import static net.kyori.adventure.text.JoinConfiguration.separator;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static net.kyori.adventure.title.Title.Times.times;
 import static org.bukkit.attribute.Attribute.*;
@@ -931,7 +940,7 @@ public final class Race {
         if (theRacer != null) {
             lines.add(text("You are #" + (theRacer.rank + 1) + "/" + tag.countAllRacers(), GREEN));
             if (!tag.coins.isEmpty()) {
-                lines.add(join(noSeparators(), Mytems.GOLDEN_COIN.component, text(" " + theRacer.coins, WHITE), text("/" + MAX_COINS, GRAY)));
+                lines.add(textOfChildren(Mytems.GOLDEN_COIN.component, text(" " + theRacer.coins, WHITE), text("/" + MAX_COINS, GRAY)));
             }
             if (!theRacer.finished) {
                 lines.add(text("Lap " + (theRacer.lap + 1) + "/" + tag.laps, GREEN));
@@ -940,29 +949,68 @@ public final class Race {
             }
             if (player.getVehicle() instanceof Attributable ride) {
                 double speed = ride.getAttribute(GENERIC_MOVEMENT_SPEED).getValue();
-                lines.add(join(noSeparators(), text("Speed ", GRAY), text((int) Math.round(speed * 100.0), GOLD)));
+                lines.add(textOfChildren(text("Speed ", GRAY), text((int) Math.round(speed * 100.0), GOLD)));
             }
         }
         String time = formatTimeShort(getTime());
         String maxTime = tag.maxDuration > 0
             ? formatTimeShort(tag.maxDuration * 1000L)
             : "" + Unicode.INFINITY.character;
-        lines.add(join(noSeparators(), text("Time ", GREEN), text(time, YELLOW), text("/", WHITE), text(maxTime, RED)));
+        lines.add(textOfChildren(text("Time ", GREEN), text(time, YELLOW), text("/", WHITE), text(maxTime, RED)));
         for (Racer racer : racers) {
             Player racerPlayer = racer.getPlayer();
             Component playerName = racerPlayer != null ? racerPlayer.displayName() : text(racer.name);
             int index = i++;
             if (index > 9) break;
             if (racer.finished) {
-                lines.add(join(noSeparators(), text("" + (index + 1) + " "), playerName).color(GOLD));
+                lines.add(textOfChildren(text("" + (index + 1) + " "), playerName).color(GOLD));
             } else if (!tag.coins.isEmpty()) {
-                lines.add(join(noSeparators(), text(index + 1 + " "),
+                lines.add(textOfChildren(text(index + 1 + " "),
                                Mytems.GOLDEN_COIN.component, text(racer.coins + " ", YELLOW),
                                playerName).color(WHITE));
             } else {
-                lines.add(join(noSeparators(), text(index + 1 + " "), playerName).color(WHITE));
+                lines.add(textOfChildren(text(index + 1 + " "), playerName).color(WHITE));
             }
         }
+    }
+
+    private String st(String in) {
+        if (in.endsWith("11")) return "th";
+        if (in.endsWith("12")) return "th";
+        if (in.endsWith("13")) return "th";
+        if (in.endsWith("1")) return "st";
+        if (in.endsWith("2")) return "nd";
+        if (in.endsWith("3")) return "rd";
+        return "th";
+    }
+
+    protected void onPlayerHud(Player player, PlayerHudEvent event) {
+        Racer racer = getRacer(player);
+        if (racer == null || !racer.racing) return;
+        final long time = racer.finished
+            ? racer.finishTime
+            : System.currentTimeMillis() - tag.startTime;
+        final long seconds = time / 1000L;
+        final long minutes = seconds / 60L;
+        List<Component> titleComponents = new ArrayList<>();
+        if (tag.racers.size() > 0) {
+            final String rank = "" + (racer.rank + 1);
+            titleComponents.add(textOfChildren(Glyph.toComponent(rank),
+                                               text(subscript(st(rank) + "/" + tag.racers.size()), GRAY)));
+        }
+        if (tag.laps > 1) {
+            titleComponents.add(textOfChildren(text(tiny("lap"), GRAY),
+                                               text(superscript(racer.lap + 1) + "/" + subscript(tag.laps), GOLD)));
+        }
+        String timeString = String.format("%02d'%02d\"%03d", minutes, seconds % 60L, time % 1000L);
+        titleComponents.add(textOfChildren(text(tiny("time"), GRAY),
+                                           text(timeString, GREEN)));
+        if (!tag.coins.isEmpty()) {
+            titleComponents.add(textOfChildren(Mytems.GOLDEN_COIN, text(racer.coins, GOLD)));
+        }
+        event.bossbar(PlayerHudPriority.HIGH, join(separator(space()), titleComponents),
+                      BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
+                      (float) racer.checkpointIndex / (float) tag.checkpoints.size());
     }
 
     /**
