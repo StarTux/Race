@@ -109,7 +109,7 @@ public final class Race {
             checkpoint.area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         }
         for (Vec3i v : tag.startVectors) {
-            Location loc = v.toLocation(getWorld());
+            Location loc = v.toCenterFloorLocation(getWorld());
             loc.getWorld().spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0);
         }
         updateGoodies();
@@ -423,7 +423,7 @@ public final class Race {
                 racer.checkpointDistance = pos.distanceSquared(center);
                 if ((ticks % 20) == 0) {
                     List<Vec3i> vecs = checkpoint.area.enumerate();
-                    Location particleLocation = Rnd.pick(vecs).toLocation(getWorld()).add(0.0, 0.5, 0.0);
+                    Location particleLocation = Rnd.pick(vecs).toCenterLocation(getWorld()).add(0.0, 0.5, 0.0);
                     player.spawnParticle(Particle.FIREWORKS_SPARK, particleLocation, 20, 0.0, 0.0, 0.0, 0.2);
                 }
                 Vector playerDirection = loc.getDirection();
@@ -602,7 +602,7 @@ public final class Race {
         Vec3i vector = racer.startVector;
         Checkpoint firstCheckpoint = tag.checkpoints.get(0);
         float yaw = Yaw.yaw(vector, firstCheckpoint.area);
-        Location location = vector.toLocation(getWorld());
+        Location location = vector.toCenterFloorLocation(getWorld());
         location.setYaw(yaw);
         return location;
     }
@@ -746,7 +746,7 @@ public final class Race {
         Checkpoint checkpoint = getLastCheckpoint(racer);
         Location loc;
         if (checkpoint.area.equals(Cuboid.ZERO)) {
-            loc = racer.startVector.toLocation(getWorld());
+            loc = racer.startVector.toCenterFloorLocation(getWorld());
         } else {
             Block block = getBottomBlock(checkpoint.area, getWorld());
             while (!block.isPassable()) block = block.getRelative(0, 1, 0);
@@ -809,7 +809,7 @@ public final class Race {
             }
             if (goody.entity == null || goody.entity.isDead()) {
                 goody.entity = null;
-                Location location = goody.where.toLocation(getWorld());
+                Location location = goody.where.toCenterFloorLocation(getWorld());
                 if (!location.isChunkLoaded()) continue;
                 goody.entity = location.getWorld().spawn(location, ArmorStand.class, e -> {
                         e.setPersistent(false);
@@ -833,7 +833,7 @@ public final class Race {
             }
             if (coin.entity == null || coin.entity.isDead()) {
                 coin.entity = null;
-                Location location = coin.where.toLocation(getWorld()).add(0.0, 0.125, 0.0);
+                Location location = coin.where.toCenterFloorLocation(getWorld()).add(0.0, 0.125, 0.0);
                 if (!location.isChunkLoaded()) continue;
                 coin.entity = location.getWorld().dropItem(location, Mytems.GOLDEN_COIN.createIcon(), e -> {
                         e.setPersistent(false);
@@ -846,7 +846,7 @@ public final class Race {
                         e.setVelocity(new Vector().zero());
                     });
             } else if (coin.entity instanceof Item item) {
-                item.teleport(coin.where.toLocation(getWorld()).add(0.0, 0.125, 0.0));
+                item.teleport(coin.where.toCenterFloorLocation(getWorld()).add(0.0, 0.125, 0.0));
                 item.setVelocity(new Vector().zero());
             }
         }

@@ -95,7 +95,7 @@ public final class RacePlugin extends JavaPlugin {
             UUID uuid = uuids.get(index);
             Player player = Bukkit.getPlayer(uuid);
             if (player == null) continue;
-            Location location = area.min.toLocation(world);
+            Location location = area.min.toCenterFloorLocation(world);
             location.setDirection(spawnLocation.toVector().subtract(location.toVector()).normalize());
             player.teleport(location);
             player.setGameMode(GameMode.ADVENTURE);
@@ -113,7 +113,7 @@ public final class RacePlugin extends JavaPlugin {
                 int indexOf = uuids.indexOf(player.getUniqueId());
                 if (indexOf >= 0 && indexOf < winnerIndex) continue;
                 Vec3i viewerVec = viewerVecs.get(index % viewerVecs.size());
-                Location location = viewerVec.toLocation(world);
+                Location location = viewerVec.toCenterFloorLocation(world);
                 location.setDirection(spawnLocation.toVector().subtract(location.toVector()).normalize());
                 player.teleport(location);
                 player.setGameMode(GameMode.ADVENTURE);
