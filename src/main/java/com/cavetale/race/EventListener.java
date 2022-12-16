@@ -141,6 +141,7 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent event) {
+        // This event appears not to fire
         Race race = plugin.races.at(event.getEntity().getLocation());
         if (race == null) return;
         event.blockList().clear();

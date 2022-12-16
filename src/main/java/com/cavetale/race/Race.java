@@ -329,6 +329,9 @@ public final class Race {
         loc.getWorld().playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 0.1f, 2.0f);
         player.setFoodLevel(20);
         player.setSaturation(20f);
+        if (tag.type.playerIsDamageable()) {
+            player.setHealth(Math.min(player.getHealth() + 1.0, player.getAttribute(GENERIC_MAX_HEALTH).getValue()));
+        }
         racer.coinCooldown = System.currentTimeMillis() + 400L;
     }
 
@@ -947,23 +950,25 @@ public final class Race {
             Vec3i v = cuboid.getMin();
             Vec3i w = cuboid.getMax();
             Bogey bogey = creepers.computeIfAbsent(v, vv -> new Bogey(vv));
-            if (bogey.cooldown > 0) {
-                bogey.cooldown -= 1;
-                continue;
-            }
-            if (bogey.entity == null || bogey.entity.isDead()) {
-                bogey.entity = null;
-                final boolean backwards = ThreadLocalRandom.current().nextBoolean();
-                Location location = !backwards
-                    ? v.toCenterFloorLocation(getWorld())
-                    : w.toCenterFloorLocation(getWorld());
-                if (!location.isChunkLoaded()) continue;
-                bogey.entity = location.getWorld().spawn(location, Creeper.class, e -> {
-                        e.setPersistent(false);
-                        Entities.setTransient(e);
-                        e.setMaxFuseTicks(1);
-                    });
-                bogey.backwards = backwards;
+            if (bogey.entity == null || bogey.entity.isDead() || bogey.entity.getLocation().getBlock().isLiquid()) {
+                if (bogey.cooldown > 0) {
+                    bogey.cooldown -= 1;
+                    continue;
+                } else {
+                    bogey.entity = null;
+                    final boolean backwards = ThreadLocalRandom.current().nextBoolean();
+                    Location location = !backwards
+                        ? v.toCenterFloorLocation(getWorld())
+                        : w.toCenterFloorLocation(getWorld());
+                    if (!location.isChunkLoaded()) continue;
+                    bogey.entity = location.getWorld().spawn(location, Creeper.class, e -> {
+                            e.setPersistent(false);
+                            Entities.setTransient(e);
+                            e.setMaxFuseTicks(1);
+                        });
+                    bogey.backwards = backwards;
+                    bogey.cooldown = 20 * 10;
+                }
             } else if (bogey.entity instanceof Creeper creeper) {
                 if (creeper.getTarget() != null) {
                     continue;
@@ -991,7 +996,7 @@ public final class Race {
                 bogey.cooldown -= 1;
                 continue;
             }
-            if (bogey.entity == null || bogey.entity.isDead()) {
+            if (bogey.entity == null || bogey.entity.isDead() || bogey.entity.getLocation().getBlock().isLiquid()) {
                 bogey.entity = null;
                 final boolean backwards = ThreadLocalRandom.current().nextBoolean();
                 Location location = !backwards
@@ -1237,6 +1242,8 @@ public final class Race {
         }
         if (racer.isInvincible()) {
             event.setCancelled(true);
+        } else if (tag.type == RaceType.SONIC && event.getCause() == DamageCause.FALL) {
+            event.setCancelled(true);
         } else if (tag.type.playerIsDamageable()) {
             return;
         } else {
@@ -1309,10 +1316,11 @@ public final class Race {
     }
 
     protected void onEntityExplode(Entity entity, EntityExplodeEvent event) {
+        // This event appears not to fire
         for (Bogey bogey : creepers.values()) {
-            if (entity.equals(bogey.entity)) {
+            if (entity == bogey.entity) {
                 bogey.cooldown = 20 * 30;
-                break;
+                return;
             }
         }
     }
