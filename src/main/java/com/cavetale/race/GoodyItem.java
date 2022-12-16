@@ -214,7 +214,11 @@ public enum GoodyItem {
     }
 
     public ItemStack createItemStack() {
-        ItemStack result = Items.text(baseItemSupplier.get(), lore);
+        return createItemStack(baseItemSupplier.get());
+    }
+
+    public ItemStack createItemStack(ItemStack base) {
+        ItemStack result = Items.text(base, lore);
         result.editMeta(meta -> {
                 Tags.set(meta.getPersistentDataContainer(),
                          new NamespacedKey(RacePlugin.instance, "goody"),

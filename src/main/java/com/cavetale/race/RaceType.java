@@ -131,6 +131,13 @@ public enum RaceType implements EditMenuAdapter {
         }
     }
 
+    public Mytems getCoinItem() {
+        switch (this) {
+        case SONIC: return Mytems.GOLDEN_HOOP;
+        default: return Mytems.GOLDEN_COIN;
+        }
+    }
+
     @Override
     public ItemStack getMenuIcon(EditMenuNode node) {
         return iconSupplier.get();

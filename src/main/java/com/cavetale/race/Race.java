@@ -92,8 +92,10 @@ public final class Race {
     protected Map<Vec3i, Bogey> creepers = new HashMap<>();
     protected Map<Vec3i, Bogey> skeletons = new HashMap<>();
     public static final int MAX_COINS = 100;
+    protected Mytems coinItem;
 
     public void onEnable() {
+        this.coinItem = tag.type.getCoinItem();
         if (tag.phase == Phase.IDLE) return;
         for (Racer racer : tag.racers) {
             Player player = racer.getPlayer();
@@ -317,7 +319,10 @@ public final class Race {
         if (choice.category == GoodyItem.Category.RARE) {
             tag.rareItemsAvailable -= 1;
         }
-        player.getInventory().addItem(choice.createItemStack());
+        ItemStack itemStack = choice == GoodyItem.COIN
+            ? choice.createItemStack(coinItem.createIcon())
+            : choice.createItemStack();
+        player.getInventory().addItem(itemStack);
         player.sendMessage(choice.lore.get(0));
         return true;
     }
@@ -342,7 +347,7 @@ public final class Race {
     protected void setCoins(Player player, Racer racer, int value) {
         racer.coins = value;
         updateVehicleSpeed(player, racer);
-        player.showTitle(title(empty(), textOfChildren(Mytems.GOLDEN_COIN, text(value, GOLD)),
+        player.showTitle(title(empty(), textOfChildren(coinItem, text(value, GOLD)),
                                times(Duration.ofSeconds(0), Duration.ofSeconds(1), Duration.ofSeconds(1))));
     }
 
@@ -934,7 +939,7 @@ public final class Race {
                 coin.entity = null;
                 Location location = coin.where.toCenterFloorLocation(getWorld()).add(0.0, 0.125, 0.0);
                 if (!location.isChunkLoaded()) continue;
-                coin.entity = location.getWorld().dropItem(location, Mytems.GOLDEN_COIN.createIcon(), e -> {
+                coin.entity = location.getWorld().dropItem(location, coinItem.createIcon(), e -> {
                         e.setPersistent(false);
                         Entities.setTransient(e);
                         e.setGravity(false);
@@ -1152,8 +1157,8 @@ public final class Race {
                 lines.add(textOfChildren(text("" + (index + 1) + " "), playerName).color(GOLD));
             } else if (!tag.coins.isEmpty()) {
                 lines.add(textOfChildren(text(index + 1 + " "),
-                               Mytems.GOLDEN_COIN.component, text(racer.coins + " ", YELLOW),
-                               playerName).color(WHITE));
+                                         coinItem.component, text(racer.coins + " ", YELLOW),
+                                         playerName).color(WHITE));
             } else {
                 lines.add(textOfChildren(text(index + 1 + " "), playerName).color(WHITE));
             }
@@ -1192,7 +1197,7 @@ public final class Race {
         titleComponents.add(textOfChildren(text(tiny("time"), GRAY),
                                            text(timeString, GREEN)));
         if (!tag.coins.isEmpty()) {
-            titleComponents.add(textOfChildren(Mytems.GOLDEN_COIN, text(racer.coins, GOLD)));
+            titleComponents.add(textOfChildren(coinItem, text(racer.coins, GOLD)));
         }
         event.bossbar(PlayerHudPriority.HIGH, join(separator(space()), titleComponents),
                       BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
