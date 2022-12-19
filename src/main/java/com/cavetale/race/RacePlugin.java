@@ -26,7 +26,7 @@ import static net.kyori.adventure.text.format.TextColor.color;
 
 public final class RacePlugin extends JavaPlugin {
     protected static RacePlugin instance;
-    protected final RaceCommand raceCommand = new RaceCommand(this);
+    protected final RaceEditCommand raceEditCommand = new RaceEditCommand(this);
     protected final Races races = new Races(this);
     protected final EventListener eventListener = new EventListener(this);
     protected int ticks;
@@ -46,7 +46,7 @@ public final class RacePlugin extends JavaPlugin {
     public void onEnable() {
         saveFile = new File(getDataFolder(), "save.json");
         getSaveFolder().mkdirs();
-        raceCommand.enable();
+        raceEditCommand.enable();
         eventListener.enable();
         races.load();
         races.onEnable();

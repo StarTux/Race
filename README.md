@@ -4,4 +4,9 @@ Racing minigame for Minecraft.
 
 ## Compatibility
 
-Build for Paper 1.16.1; will most likely work on Spigot.
+FIXME
+
+- Checkpoint hitboxes are inaccurate
+- Lap resets maybe?
+- Boats glitch into the floor
+- Fix race finish timestamp

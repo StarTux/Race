@@ -12,13 +12,24 @@ depend: [Core, Mytems, WorldMarker, Fam, Area]
 softdepend: []
 
 commands:
-  race:
-    aliases: [raceedit, raceadmin, redit]
+  racer:
+    aliases: []
     description: Race Command
+    permission: race.race
+    usage: /race
+
+  raceedit:
+    aliases: [raceadmin]
+    description: Race Admin Command
     permission: race.admin
     usage: /race
 
 permissions:
-  race.admin:
+
+  race.race:
     description: Use /race
+    default: op
+
+  race.admin:
+    description: Use /raceadmin
     default: op

@@ -22,9 +22,9 @@ import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
-public final class RaceCommand extends AbstractCommand<RacePlugin> {
-    protected RaceCommand(final RacePlugin plugin) {
-        super(plugin, "race");
+public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
+    protected RaceEditCommand(final RacePlugin plugin) {
+        super(plugin, "raceedit");
     }
 
     @Override
