@@ -6,7 +6,6 @@ Racing minigame for Minecraft.
 
 FIXME
 
-- Checkpoint hitboxes are inaccurate
 - Lap resets maybe?
 - Boats glitch into the floor
 - Direction is easy to miss

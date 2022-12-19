@@ -65,7 +65,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockIterator;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.EulerAngle;
+import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import static com.cavetale.core.font.Unicode.subscript;
 import static com.cavetale.core.font.Unicode.superscript;
@@ -227,23 +229,9 @@ public final class Race {
         }
     }
 
-    private static boolean contains2(Cuboid cuboid, Vec3i vec) {
-        return vec.x >= cuboid.ax - 1 && vec.x <= cuboid.bx + 1
-            && vec.y >= cuboid.ay - 1 && vec.y <= cuboid.by + 1
-            && vec.z >= cuboid.az - 1 && vec.z <= cuboid.bz + 1;
-    }
-
     private void passThroughBlock(Player player, Racer racer, Block block) {
         if (racer.finished) return;
         Vec3i vec = Vec3i.of(block);
-        Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
-        if (contains2(checkpoint.area, vec)) {
-            progressCheckpoint(player, racer);
-            if (!racer.finished) {
-                checkpoint = tag.checkpoints.get(racer.checkpointIndex);
-                setupCheckpoint(racer, checkpoint);
-            }
-        }
         long now = System.currentTimeMillis();
         if (racer.goodyCooldown < now && GoodyItem.count(player.getInventory()) < 2) {
             for (int y = -1; y < 2; y += 1) {
@@ -514,8 +502,15 @@ public final class Race {
             ? vehicle.getLocation()
             : player.getLocation();
         passThroughBlock(player, racer, loc.getBlock());
+        Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+        if (checkpoint.area.contains(player.getLocation())) {
+            progressCheckpoint(player, racer);
+            if (!racer.finished) {
+                checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+                setupCheckpoint(racer, checkpoint);
+            }
+        }
         try {
-            Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
             Vec3i pos = Vec3i.of(loc.getBlock());
             Vec3i center = checkpoint.area.getCenter();
             racer.checkpointDistance = pos.distanceSquared(center);
@@ -897,7 +892,6 @@ public final class Race {
         double length = direction.length();
         if (length < 0.01) return;
         BlockIterator iter = new BlockIterator(from.getWorld(), from.toVector(), direction.normalize(), 0.0, 0);
-        Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
         int count = 0;
         Block end = to.getBlock();
         while (iter.hasNext()) {
@@ -905,6 +899,18 @@ public final class Race {
             Block block = iter.next();
             passThroughBlock(player, racer, block);
             if (block.equals(end)) break;
+        }
+        Checkpoint checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+        BoundingBox bb = checkpoint.area.toBoundingBox();
+        Vector a = from.toVector();
+        Vector b = to.toVector();
+        RayTraceResult rayTraceResult = bb.rayTrace(a, b.clone().subtract(a), a.distance(b));
+        if (rayTraceResult != null) {
+            progressCheckpoint(player, racer);
+            if (!racer.finished) {
+                checkpoint = tag.checkpoints.get(racer.checkpointIndex);
+                setupCheckpoint(racer, checkpoint);
+            }
         }
     }
 
