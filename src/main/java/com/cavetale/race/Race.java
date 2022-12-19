@@ -29,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
@@ -158,9 +157,10 @@ public final class Race {
     private void tickStart(int ticks) {
         pruneRacers();
         int ticksLeft = 200 - tag.phaseTicks;
+        final long now = System.currentTimeMillis();
         if (ticksLeft < 0) {
             setPhase(Phase.RACE);
-            tag.startTime = System.currentTimeMillis();
+            tag.startTime = now;
             tag.rareItemsAvailable = 0;
             tag.finishIndex = 0;
             tag.maxLap = 0;
@@ -184,6 +184,7 @@ public final class Race {
                 if (tag.type == RaceType.SONIC) {
                     player.getInventory().setBoots(Mytems.SNEAKERS.createItemStack());
                 }
+                racer.lapStartTime = now;
             }
             return;
         }
@@ -196,17 +197,17 @@ public final class Race {
             case 2:
             case 1:
                 for (Player player : getPresentPlayers()) {
-                    player.showTitle(Title.title(text("" + secondsLeft, GREEN),
-                                                 text("Get Ready", GREEN),
-                                                 times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
+                    player.showTitle(title(text("" + secondsLeft, GREEN),
+                                           text("Get Ready", GREEN),
+                                           times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.MASTER, 0.2f, 2.0f);
                 }
                 break;
             case 0:
                 for (Player player : getPresentPlayers()) {
-                    player.showTitle(Title.title(text("GO!", GREEN, TextDecoration.ITALIC),
-                                                 text("Good Luck", GREEN),
-                                                 times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
+                    player.showTitle(title(text("GO!", GREEN, TextDecoration.ITALIC),
+                                           text("Good Luck", GREEN),
+                                           times(Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO)));
                     player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 0.2f, 2.0f);
                 }
                 break;
@@ -415,7 +416,9 @@ public final class Race {
                 racer.finishTime = System.currentTimeMillis() - tag.startTime;
                 racer.finishIndex = tag.finishIndex++;
                 if (player.getVehicle() != null) player.getVehicle().remove();
-                plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + (racer.finishIndex + 1));
+                final String timeString = formatTime(racer.finishTime);
+                final String rankString = "" + (racer.finishIndex + 1);
+                plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + rankString + " " + timeString);
                 if (plugin.save.event) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
                     int score = getEventScore(racer.finishIndex);
@@ -430,15 +433,19 @@ public final class Race {
                                                + String.join(" ", tag.type.getWinnerTitles()));
                     }
                 }
-                player.showTitle(Title.title(text("#" + (racer.finishIndex + 1), GREEN),
-                                             text(formatTime(racer.finishTime), GREEN),
-                                             times(Duration.ofMillis(500), Duration.ofSeconds(2), Duration.ofMillis(500))));
+                player.showTitle(title(textOfChildren(Glyph.toComponent(rankString), text(st(rankString), GRAY)),
+                                       text(timeString, GREEN),
+                                       times(Duration.ofMillis(500), Duration.ofSeconds(2), Duration.ofMillis(500))));
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 2.0f);
                 for (Player target : getPresentPlayers()) {
                     target.sendMessage("");
-                    target.sendMessage(ChatColor.GREEN + player.getName()
-                                       + " finished #" + (racer.finishIndex + 1)
-                                       + " in " + formatTime(racer.finishTime));
+                    target.sendMessage(textOfChildren(tag.type.getCoinItem(),
+                                                      space(),
+                                                      player.displayName(),
+                                                      text(" finished #", GRAY),
+                                                      Glyph.toComponent(rankString),
+                                                      text(" in ", GRAY),
+                                                      text(timeString, GREEN)));
                     target.sendMessage("");
                 }
                 player.setGameMode(GameMode.SPECTATOR);
@@ -447,27 +454,34 @@ public final class Race {
                 if (player.getVehicle() != null) player.getVehicle().remove();
                 clearInventory(player);
             } else {
-                player.showTitle(Title.title(text((racer.lap + 1) + "/" + tag.laps, GREEN),
-                                             text("Lap " + (racer.lap + 1), GREEN),
-                                             times(Duration.ofMillis(500),
-                                                   Duration.ofMillis(1000),
-                                                   Duration.ofMillis(0))));
+                final long now = System.currentTimeMillis();
+                final long lapTime = now - racer.lapStartTime;
+                final String timeString = formatTime(lapTime);
+                final String lapString = "" + (racer.lap + 1);
+                player.sendMessage(textOfChildren(text("Lap ", GRAY),
+                                                  text(lapString, GREEN),
+                                                  text("/", GRAY),
+                                                  text(tag.laps, GREEN),
+                                                  space(),
+                                                  text(timeString, GREEN)));
+                racer.lapStartTime = System.currentTimeMillis();
             }
         }
         if (tag.type == RaceType.ELYTRA && player.isGliding()) {
             player.boostElytra(new ItemStack(Material.FIREWORK_ROCKET));
         }
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.1f, 2.0f);
     }
 
     private void tickRace(int ticks) {
         if (tag.maxDuration > 0) {
             if (getTime() > tag.maxDuration * 1000L) {
                 for (Player player : getPresentPlayers()) {
-                    player.showTitle(Title.title(text("Timeout", RED),
-                                                 text("The race is over", RED),
-                                                 times(Duration.ZERO,
-                                                       Duration.ofSeconds(2),
-                                                       Duration.ofSeconds(1))));
+                    player.showTitle(title(text("Timeout", RED),
+                                           text("The race is over", RED),
+                                           times(Duration.ZERO,
+                                                 Duration.ofSeconds(2),
+                                                 Duration.ofSeconds(1))));
                     player.sendMessage(text("Timeout! The race is over", RED));
                 }
                 stopRace();
@@ -727,9 +741,9 @@ public final class Race {
             player.setAllowFlight(true);
             player.setFlying(true);
             player.setFlySpeed(0.0f);
-            player.showTitle(Title.title(text("Race", GREEN, TextDecoration.ITALIC),
-                                         text("The Race Begins", GREEN),
-                                         times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(1))));
+            player.showTitle(title(text("Race", GREEN, TextDecoration.ITALIC),
+                                   text("The Race Begins", GREEN),
+                                   times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(1))));
             player.setWalkSpeed(0f);
             player.setHealth(player.getAttribute(GENERIC_MAX_HEALTH).getValue());
             player.setFoodLevel(20);
@@ -768,18 +782,9 @@ public final class Race {
     }
 
     public static String formatTime(long millis) {
-        int secs = ((int) (millis / 1000)) % 60;
-        int mins = (int) (millis / 1000 / 60);
-        int mils = (int) (millis % 1000L);
-        String milString = "" + mils;
-        if (milString.isEmpty()) milString = "00";
-        if (milString.length() > 2) milString = milString.substring(0, 2);
-        while (milString.length() < 2) milString = milString + "0";
-        if (mins > 0) {
-            return String.format("%d:%02d.%s", mins, secs, milString);
-        } else {
-            return String.format("%d.%s", secs, milString);
-        }
+        final long seconds = millis / 1000L;
+        final long minutes = seconds / 60L;
+        return String.format("%02d'%02d\"%03d", minutes, seconds % 60L, millis % 1000L);
     }
 
     public static String formatTimeShort(long millis) {

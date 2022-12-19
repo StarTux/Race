@@ -27,6 +27,7 @@ public final class Racer implements Comparable<Racer> {
     protected long coinCooldown = 0L;
     protected int coins = 0;
     protected int invincibleTicks = 0;
+    protected long lapStartTime = 0L;
 
     Racer(final Player player) {
         this.uuid = player.getUniqueId();

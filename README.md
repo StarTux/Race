@@ -9,4 +9,4 @@ FIXME
 - Checkpoint hitboxes are inaccurate
 - Lap resets maybe?
 - Boats glitch into the floor
-- Fix race finish timestamp
+- Direction is easy to miss
