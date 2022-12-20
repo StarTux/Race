@@ -79,6 +79,7 @@ import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.separator;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextDecoration.*;
 import static net.kyori.adventure.title.Title.Times.times;
 import static net.kyori.adventure.title.Title.title;
 import static org.bukkit.attribute.Attribute.*;
@@ -523,12 +524,19 @@ public final class Race {
             Vec3i direction = center.subtract(pos);
             double playerAngle = Math.atan2(playerDirection.getZ(), playerDirection.getX());
             double targetAngle = Math.atan2((double) direction.z, (double) direction.x);
+            boolean backwards = false;
             if (Double.isFinite(playerAngle) && Double.isFinite(targetAngle)) {
                 double angle = targetAngle - playerAngle;
                 if (angle > Math.PI) angle -= 2.0 * Math.PI;
                 if (angle < -Math.PI) angle += 2.0 * Math.PI;
                 if (Math.abs(angle) > Math.PI * 0.5) {
-                    player.sendActionBar(Mytems.ARROW_DOWN.component);
+                    backwards = true;
+                    racer.backwardsTicks += 1;
+                    if (racer.backwardsTicks > 60 && (tag.phaseTicks % 30) < 15) {
+                        player.sendActionBar(text("TURN AROUND", DARK_RED, BOLD));
+                    } else {
+                        player.sendActionBar(Mytems.ARROW_DOWN.component);
+                    }
                 } else if (angle < Math.PI * -0.25) {
                     player.sendActionBar(Mytems.ARROW_LEFT.component);
                 } else if (angle > Math.PI * 0.25) {
@@ -541,6 +549,7 @@ public final class Race {
                     player.sendActionBar(Mytems.ARROW_UP.component);
                 }
             }
+            if (!backwards) racer.backwardsTicks = 0;
         } catch (Exception e) {
             e.printStackTrace();
         }
