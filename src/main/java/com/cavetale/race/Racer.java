@@ -2,6 +2,7 @@ package com.cavetale.race;
 
 import com.cavetale.core.struct.Vec3i;
 import java.util.UUID;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -9,7 +10,7 @@ import org.bukkit.entity.Player;
 /**
  * Persistenct type, maintained by Race.
  */
-@RequiredArgsConstructor
+@Getter @RequiredArgsConstructor
 public final class Racer implements Comparable<Racer> {
     protected final UUID uuid;
     protected final String name;

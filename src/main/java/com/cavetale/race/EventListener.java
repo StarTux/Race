@@ -307,6 +307,12 @@ public final class EventListener implements Listener {
         Race race = plugin.races.at(event.getFrom());
         if (race == null) return;
         Player player = event.getPlayer();
+        Racer racer = race.getRacer(player);
+        if (racer == null) return;
+        if (race.getRaceType().isMounted() && racer.racing && player.getVehicle() == null && event.hasChangedBlock()) {
+            event.setCancelled(true);
+            return;
+        }
         race.onMoveFromTo(player, event.getFrom(), event.getTo());
     }
 
