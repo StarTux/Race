@@ -76,6 +76,9 @@ public enum RaceType implements EditMenuAdapter {
                    && level.getLevel() == 0) {
                 location = location.add(0.0, 1.0, 0.0);
             }
+            if (!location.getBlock().getCollisionShape().getBoundingBoxes().isEmpty()) {
+                location = location.add(0.0, 1.0, 0.0);
+            }
             return location.getWorld().spawn(location, Boat.class, e -> {
                     e.setPersistent(false);
                     Boat.Type[] types = Boat.Type.values();
