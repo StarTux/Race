@@ -263,8 +263,6 @@ public final class EventListener implements Listener {
         switch (event.getAction()) {
         case RIGHT_CLICK_BLOCK:
         case RIGHT_CLICK_AIR:
-        case LEFT_CLICK_BLOCK:
-        case LEFT_CLICK_AIR:
             break;
         default: return;
         }
