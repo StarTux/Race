@@ -387,10 +387,7 @@ public final class Race {
 
     private void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
-        if (tag.type == RaceType.BROOM) {
-            setCoins(player, racer, Math.max(0, racer.coins - 3));
-            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setFlyTicks(0);
-        } else if (tag.type == RaceType.SONIC) {
+        if (tag.type == RaceType.SONIC) {
             setCoins(player, racer, racer.coins + 1);
         }
         if (racer.checkpointIndex >= tag.checkpoints.size()) {
