@@ -54,6 +54,7 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.event.vehicle.VehicleEntityCollisionEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.inventory.ItemStack;
@@ -81,12 +82,11 @@ public final class EventListener implements Listener {
         if (race == null) return;
         if (event.getEntity() instanceof Player player) {
             race.onPlayerDamage(player, event);
-        } else {
-            onVehicleDamage(event.getEntity(), race, event);
-        }
-        if (event.getEntity() instanceof EnderCrystal) {
+        } else if (event.getEntity() instanceof EnderCrystal) {
             event.setCancelled(true);
             return;
+        } else {
+            onVehicleDamage(event.getEntity(), race, event);
         }
     }
 
@@ -232,16 +232,29 @@ public final class EventListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) return;
         Racer racer = race.getRacer(player);
         if (racer != null && racer.racing && !racer.finished) {
-            if (race.tag.type != RaceType.BOAT) {
+            boolean dead = event.getDismounted().isDead();
+            if (!dead) {
                 event.setCancelled(true);
             } else {
                 racer.remountCooldown = 100;
                 race.setCoins(player, racer, 0);
                 event.getDismounted().remove();
+                player.sendMessage(text("You lost your vehicle", RED));
             }
         } else {
             event.getDismounted().remove();
         }
+    }
+
+    @EventHandler
+    private void onVehicleDamage(VehicleDamageEvent event) {
+        Race race = plugin.races.at(event.getVehicle().getLocation());
+        if (race == null || !race.isMounted() || !race.isRacing()) return;
+        List<Entity> passengers = event.getVehicle().getPassengers();
+        if (passengers.isEmpty() || !(passengers.get(0) instanceof Player player)) return;
+        Racer racer = race.getRacer(player);
+        if (racer == null) return;
+        if (racer.isInvincible()) event.setCancelled(true);
     }
 
     @EventHandler

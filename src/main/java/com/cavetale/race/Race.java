@@ -335,6 +335,7 @@ public final class Race {
     }
 
     protected void setCoins(Player player, Racer racer, int value) {
+        if (tag.coins.isEmpty()) return;
         racer.coins = value;
         updateVehicleSpeed(player, racer);
         player.showTitle(title(empty(), textOfChildren(coinItem, text(value, GOLD)),
@@ -1238,14 +1239,13 @@ public final class Race {
                     if (clearCoinsOnDeath) {
                         setCoins(player, racer, 0);
                     }
-                    player.sendMessage(text("You lost your vehicle", RED));
                 }
             } else {
                 vehicle.remove();
+                racer.remountCooldown = 60;
                 if (clearCoinsOnDeath) {
                     setCoins(player, racer, 0);
                 }
-                player.sendMessage(text("You lost your vehicle", RED));
             }
             return true;
         }
