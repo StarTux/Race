@@ -9,7 +9,6 @@ import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.mytems.item.trophy.TrophyType;
-import com.destroystokyo.paper.event.entity.ProjectileCollideEvent;
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import java.util.ArrayList;
@@ -126,17 +125,13 @@ public final class EventListener implements Listener {
 
     @EventHandler
     public void onProjectileHit(ProjectileHitEvent event) {
-        Projectile proj = event.getEntity();
-        Race race = plugin.races.at(proj.getLocation());
-        if (race != null) race.onProjectileHit(proj, event);
-    }
-
-    @EventHandler
-    public void onProjectileCollide(ProjectileCollideEvent event) {
         if (event.getEntity() instanceof Firework) {
             event.setCancelled(true);
             return;
         }
+        Projectile proj = event.getEntity();
+        Race race = plugin.races.at(proj.getLocation());
+        if (race != null) race.onProjectileHit(proj, event);
     }
 
     @EventHandler
