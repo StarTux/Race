@@ -49,7 +49,7 @@ public enum GoodyItem {
     BOMB(Category.REGULAR,
          Mytems.BOMB::createIcon,
          List.of(text("Explosive Trap", DARK_RED)),
-         (race, player, racer) -> 0.5,
+         (race, player, racer) -> 0.25,
          (race, player, racer, item) -> {
              item.subtract(1);
              TNTPrimed tnt = player.getWorld().spawn(player.getEyeLocation(), TNTPrimed.class, e -> {
@@ -80,15 +80,18 @@ public enum GoodyItem {
           () -> potionItem(Material.POTION, PotionType.SPEED),
           List.of(text("Speed Boost", BLUE)),
           (race, player, racer) -> {
-              return racer.rank == 0
-                  ? 0.0
-                  : racer.rank / (double) race.tag.racerCount;
+              return switch (racer.rank) {
+              case 0 -> 0.0;
+              case 1 -> 0.25;
+              case 2 -> 0.5;
+              default -> 1.0;
+              };
           },
           (race, player, racer, item) -> {
               if (player.getVehicle() instanceof LivingEntity target) {
                   item.subtract(1);
                   target.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,
-                                                          200, 2, true, true, true));
+                                                          200 + racer.rank * 20, 2, true, true, true));
                   Location loc = player.getLocation();
                   Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());
                   player.playSound(loc, ENTITY_PLAYER_SPLASH_HIGH_SPEED, 2.0f, 2.0f);
@@ -110,7 +113,7 @@ public enum GoodyItem {
     CROSSBOW(Category.REGULAR,
              () -> loadedCrossbow(),
              List.of(text("Exploding Arrow", RED)),
-             (race, player, racer) -> 0.5,
+             (race, player, racer) -> 0.25,
              (race, player, racer, item) -> {
                  item.subtract(1);
                  player.launchProjectile(SpectralArrow.class);
@@ -175,7 +178,7 @@ public enum GoodyItem {
                       if (racer.rank <= otherRacer.rank) continue;
                       Player otherPlayer = otherRacer.getPlayer();
                       if (otherPlayer == null) continue;
-                      if (race.damageVehicle(otherPlayer, otherRacer, 20.0, false)) {
+                      if (race.damageVehicle(otherPlayer, otherRacer, 10.0, false)) {
                           otherPlayer.getWorld().strikeLightningEffect(otherPlayer.getLocation());
                           otherPlayer.sendMessage(text("Struck by lightning!", RED));
                           count += 1;
