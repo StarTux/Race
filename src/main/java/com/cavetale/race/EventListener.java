@@ -54,6 +54,7 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.event.vehicle.VehicleEntityCollisionEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
@@ -307,9 +308,10 @@ public final class EventListener implements Listener {
         Race race = plugin.races.at(event.getFrom());
         if (race == null) return;
         Player player = event.getPlayer();
+        if (player.getGameMode() == GameMode.SPECTATOR) return;
         Racer racer = race.getRacer(player);
-        if (racer == null) return;
-        if (race.getRaceType().isMounted() && racer.racing && player.getVehicle() == null && event.hasChangedBlock()) {
+        if (racer == null || !racer.isRacing()) return;
+        if (race.getRaceType().isMounted() && racer.racing && player.getVehicle() == null && event.hasChangedBlock() && !(event instanceof PlayerTeleportEvent)) {
             event.setCancelled(true);
             return;
         }
