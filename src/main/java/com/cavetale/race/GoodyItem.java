@@ -153,7 +153,7 @@ public enum GoodyItem {
          (race, player, racer) -> race.tag.coins.isEmpty() ? 0.0 : 1.0,
          (race, player, racer, item) -> {
              item.subtract(1);
-             race.setCoins(player, racer, Math.min(Race.MAX_COINS, racer.coins + 1 + racer.rank));
+             race.setCoins(player, racer, racer.coins + 1 + racer.rank);
              player.playSound(player.getLocation(), ENTITY_PLAYER_LEVELUP, MASTER, 0.5f, 2.0f);
              return true;
          }),
