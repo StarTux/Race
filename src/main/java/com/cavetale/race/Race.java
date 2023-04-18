@@ -43,12 +43,11 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
 import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
-import org.bukkit.entity.Item;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -66,9 +65,11 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.BoundingBox;
-import org.bukkit.util.EulerAngle;
 import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 import static com.cavetale.core.font.Unicode.subscript;
 import static com.cavetale.core.font.Unicode.superscript;
 import static com.cavetale.core.font.Unicode.tiny;
@@ -930,21 +931,23 @@ public final class Race {
             }
             if (goody.entity == null || goody.entity.isDead()) {
                 goody.entity = null;
-                Location location = goody.where.toCenterFloorLocation(getWorld());
+                Location location = goody.where.toCenterLocation(getWorld());
                 if (!location.isChunkLoaded()) continue;
-                goody.entity = location.getWorld().spawn(location, ArmorStand.class, e -> {
+                goody.entity = location.getWorld().spawn(location, ItemDisplay.class, e -> {
                         e.setPersistent(false);
                         Entities.setTransient(e);
-                        e.setVisible(false);
-                        e.setGravity(false);
-                        e.setMarker(true);
-                        e.setSmall(true);
-                        e.getEquipment().setHelmet(Mytems.BOSS_CHEST.createIcon());
+                        e.setBrightness(new ItemDisplay.Brightness(15, 15));
+                        e.setShadowRadius(1.0f);
+                        e.setShadowStrength(0.5f);
+                        e.setBrightness(new ItemDisplay.Brightness(15, 15));
+                        e.setItemStack(Mytems.BOSS_CHEST.createIcon());
                     });
-            } else if (goody.entity instanceof ArmorStand armorStand) {
-                EulerAngle euler = armorStand.getHeadPose();
-                euler = euler.setY(euler.getY() + 0.15);
-                armorStand.setHeadPose(euler);
+            } else if (goody.entity instanceof ItemDisplay itemDisplay) {
+                itemDisplay.setTransformation(new Transformation(new Vector3f(0f, 0f, 0f),
+                                                                 new AxisAngle4f(goody.rotation, 0f, 1f, 0f),
+                                                                 new Vector3f(1f, 1f, 1f),
+                                                                 new AxisAngle4f(0f, 0f, 0f, 0f)));
+                goody.rotation += 0.1f;
             }
         }
         for (Vec3i vector : tag.coins) {
@@ -955,22 +958,18 @@ public final class Race {
             }
             if (coin.entity == null || coin.entity.isDead()) {
                 coin.entity = null;
-                Location location = coin.where.toCenterFloorLocation(getWorld()).add(0.0, 0.125, 0.0);
+                Location location = coin.where.toCenterLocation(getWorld());
                 if (!location.isChunkLoaded()) continue;
-                coin.entity = location.getWorld().dropItem(location, coinItem.createIcon(), e -> {
+                coin.entity = location.getWorld().spawn(location, ItemDisplay.class, e -> {
                         e.setPersistent(false);
                         Entities.setTransient(e);
-                        e.setGravity(false);
-                        e.setCanPlayerPickup(false);
-                        e.setCanMobPickup(false);
-                        e.setUnlimitedLifetime(true);
-                        e.setWillAge(false);
-                        e.setPickupDelay(0);
-                        e.setVelocity(new Vector().zero());
+                        e.setBrightness(new ItemDisplay.Brightness(15, 15));
+                        e.setShadowRadius(0.35f);
+                        e.setShadowStrength(0.5f);
+                        e.setBillboard(ItemDisplay.Billboard.CENTER);
+                        e.setBrightness(new ItemDisplay.Brightness(15, 15));
+                        e.setItemStack(coinItem.createIcon());
                     });
-            } else if (coin.entity instanceof Item item) {
-                item.teleport(coin.where.toCenterFloorLocation(getWorld()).add(0.0, 0.125, 0.0));
-                item.setVelocity(new Vector().zero());
             }
         }
         for (Cuboid cuboid : tag.creepers) {

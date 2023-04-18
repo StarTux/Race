@@ -13,4 +13,5 @@ public final class Goody {
     protected final Vec3i where;
     protected int cooldown = 0;
     protected Entity entity;
+    protected float rotation;
 }
