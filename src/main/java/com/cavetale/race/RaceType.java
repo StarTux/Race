@@ -140,7 +140,6 @@ public enum RaceType implements EditMenuAdapter {
     public List<String> getWinnerTitles() {
         switch (this) {
         case HORSE:
-        case CAMEL:
             return List.of("Jockey", "Equestrian", "JollyJumper", "Secretariat");
         case ICE_BOAT:
             return List.of("Drifter");
@@ -148,6 +147,8 @@ public enum RaceType implements EditMenuAdapter {
             return List.of("Sailor");
         case PIG:
             return List.of("PigRacer", "BaconRacer");
+        case CAMEL:
+            return List.of("Cameleer");
         default:
             return List.of("Falcon");
         }
