@@ -238,7 +238,7 @@ public final class EventListener implements Listener {
                 event.setCancelled(true);
             } else {
                 racer.remountCooldown = 100;
-                race.setCoins(player, racer, 0);
+                race.resetCoinsOnDeath(player, racer);
                 event.getDismounted().remove();
                 player.sendMessage(text("You lost your vehicle", RED));
             }
@@ -360,7 +360,7 @@ public final class EventListener implements Listener {
         Racer racer = race.getRacer(player);
         if (racer == null || !racer.racing || racer.finished) return;
         racer.remountCooldown = 100;
-        race.setCoins(player, racer, 0);
+        race.resetCoinsOnDeath(player, racer);
     }
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)

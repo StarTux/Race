@@ -343,6 +343,10 @@ public final class Race {
                                times(Duration.ofSeconds(0), Duration.ofSeconds(1), Duration.ofSeconds(1))));
     }
 
+    protected void resetCoinsOnDeath(Player player, Racer racer) {
+        setCoins(player, racer, racer.coins / 2);
+    }
+
     private static final UUID SPEED_BONUS_UUID = UUID.fromString("5209c14a-7d9c-41e9-858a-2b6da987486a");
 
     protected void updateVehicleSpeed(Player player, Racer racer) {
@@ -573,7 +577,7 @@ public final class Race {
         if (tag.type == RaceType.SONIC) {
             if (player.isSwimming() || player.getLocation().getBlock().isLiquid()) {
                 teleportToLastCheckpoint(player);
-                setCoins(player, racer, 0);
+                resetCoinsOnDeath(player, racer);
                 player.playSound(player.getLocation(), Sound.ENTITY_DOLPHIN_JUMP, SoundCategory.MASTER, 1.0f, 1.0f);
             }
         }
@@ -1238,14 +1242,14 @@ public final class Race {
                     vehicle.remove();
                     racer.remountCooldown = 60;
                     if (clearCoinsOnDeath) {
-                        setCoins(player, racer, 0);
+                        resetCoinsOnDeath(player, racer);
                     }
                 }
             } else {
                 vehicle.remove();
                 racer.remountCooldown = 60;
                 if (clearCoinsOnDeath) {
-                    setCoins(player, racer, 0);
+                    resetCoinsOnDeath(player, racer);
                 }
             }
             return true;
@@ -1254,7 +1258,7 @@ public final class Race {
             player.setGliding(false);
             racer.remountCooldown = 60;
             if (clearCoinsOnDeath) {
-                setCoins(player, racer, 0);
+                resetCoinsOnDeath(player, racer);
             }
             return true;
         }
@@ -1283,7 +1287,7 @@ public final class Race {
         if (racer == null) {
             return;
         }
-        setCoins(player, racer, 0);
+        resetCoinsOnDeath(player, racer);
         event.setKeepInventory(true);
         event.getDrops().clear();
         event.setKeepLevel(false);
