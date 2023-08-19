@@ -760,6 +760,8 @@ public final class Race {
             player.getInventory().setItem(8, GoodyItem.RETURN.createItemStack());
             if (tag.type == RaceType.HORSE) {
                 player.getInventory().setHelmet(Mytems.COWBOY_HAT.createItemStack());
+            } else if (tag.type == RaceType.CAMEL) {
+                player.getInventory().setHelmet(Mytems.STRAW_HAT.createItemStack());
             } else if (tag.type == RaceType.BOAT || tag.type == RaceType.ICE_BOAT) {
                 player.getInventory().setHelmet(Mytems.PIRATE_HAT.createItemStack());
             }

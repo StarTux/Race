@@ -13,6 +13,7 @@ import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.Boat;
+import org.bukkit.entity.Camel;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Strider;
@@ -31,6 +32,7 @@ public enum RaceType implements EditMenuAdapter {
     ELYTRA(() -> new ItemStack(Material.ELYTRA)),
     BROOM(Mytems.WITCH_BROOM::createIcon),
     SONIC(Mytems.SNEAKERS::createIcon),
+    CAMEL(() -> new ItemStack(Material.CAMEL_SPAWN_EGG)),
     ;
 
     public final Supplier<ItemStack> iconSupplier;
@@ -42,6 +44,7 @@ public enum RaceType implements EditMenuAdapter {
         case BOAT:
         case HORSE:
         case PIG:
+        case CAMEL:
             return true;
         default:
             return false;
@@ -103,6 +106,21 @@ public enum RaceType implements EditMenuAdapter {
                 });
             return horse;
         }
+        case CAMEL: {
+            Camel camel = location.getWorld().spawn(location, Camel.class, e -> {
+                    e.setPersistent(false);
+                    e.setAdult();
+                    e.setAgeLock(true);
+                    double variance = 0.01;
+                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.175);
+                    e.setJumpStrength(0.3);
+                    e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
+                    e.setHealth(20.0);
+                    e.setTamed(true);
+                    e.getInventory().setSaddle(new ItemStack(Material.SADDLE));
+                });
+            return camel;
+        }
         case PIG: {
             Pig pig = location.getWorld().spawn(location, Pig.class, e -> {
                     e.setPersistent(false);
@@ -122,6 +140,7 @@ public enum RaceType implements EditMenuAdapter {
     public List<String> getWinnerTitles() {
         switch (this) {
         case HORSE:
+        case CAMEL:
             return List.of("Jockey", "Equestrian", "JollyJumper", "Secretariat");
         case ICE_BOAT:
             return List.of("Drifter");
