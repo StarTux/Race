@@ -49,7 +49,7 @@ public enum GoodyItem {
     BOMB(Category.REGULAR,
          Mytems.BOMB::createIcon,
          List.of(text("Explosive Trap", DARK_RED)),
-         (race, player, racer) -> 0.25,
+         (race, player, racer) -> 0.05 / (double) race.tag.racerCount,
          (race, player, racer, item) -> {
              item.subtract(1);
              TNTPrimed tnt = player.getWorld().spawn(player.getEyeLocation(), TNTPrimed.class, e -> {
@@ -113,7 +113,7 @@ public enum GoodyItem {
     CROSSBOW(Category.REGULAR,
              () -> loadedCrossbow(),
              List.of(text("Exploding Arrow", RED)),
-             (race, player, racer) -> 0.25,
+             (race, player, racer) -> 0.15 / race.tag.racerCount,
              (race, player, racer, item) -> {
                  item.subtract(1);
                  player.launchProjectile(SpectralArrow.class);
