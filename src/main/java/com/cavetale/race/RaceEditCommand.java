@@ -11,15 +11,15 @@ import com.cavetale.core.editor.Editor;
 import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec3i;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
@@ -151,9 +151,9 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
     private boolean list(CommandContext context, CommandNode node, String[] args) {
         if (args.length != 0) return false;
         List<Race> races = plugin.races.all();
-        context.message("" + ChatColor.YELLOW + races.size() + " race(s)");
+        context.message(text(races.size() + " race(s)", YELLOW));
         for (Race race : races) {
-            context.message("  " + ChatColor.YELLOW + race.listString());
+            context.message(text("  " + race.listString()));
         }
         return true;
     }
@@ -162,20 +162,17 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 0) return false;
         Race race = requireRace(player);
         if (race == null) throw new CommandWarn("There is no race here!");
-        ChatColor a = ChatColor.GRAY;
-        ChatColor b = ChatColor.WHITE;
-        player.sendMessage(a + "worldName " + b + race.tag.worldName);
-        player.sendMessage(a + "type " + b + race.tag.type);
-        player.sendMessage(a + "area " + b + race.tag.area);
-        player.sendMessage(a + "spawnArea " + b + race.tag.spawnArea);
-        player.sendMessage(a + "spawnLocation " + b + race.tag.spawnLocation.simpleString());
-        player.sendMessage(a + "startVectors " + b + race.tag.startVectors.size());
-        player.sendMessage(a + "checkpoints " + b + race.tag.checkpoints.size());
-        player.sendMessage(a + "goodies " + b + race.tag.goodies.size());
-        player.sendMessage(a + "laps " + b + race.tag.laps);
-        player.sendMessage(a + "racing " + b + race.tag.countRacers());
-        player.sendMessage(a + "maxDuration " + b + race.formatTimeShort(race.tag.maxDuration * 1000L)
-                           + " (" + race.tag.maxDuration + ")");
+        player.sendMessage(textOfChildren(text("worldName ", GRAY), text(race.tag.worldName, WHITE)));
+        player.sendMessage(textOfChildren(text("type ", GRAY), text(race.tag.type.name(), WHITE)));
+        player.sendMessage(textOfChildren(text("area ", GRAY), text(race.tag.area.toString(), WHITE)));
+        player.sendMessage(textOfChildren(text("spawnArea ", GRAY), text(race.tag.spawnArea.toString(), WHITE)));
+        player.sendMessage(textOfChildren(text("spawnLocation ", GRAY), text(race.tag.spawnLocation.simpleString(), WHITE)));
+        player.sendMessage(textOfChildren(text("startVectors ", GRAY), text(race.tag.startVectors.size(), WHITE)));
+        player.sendMessage(textOfChildren(text("checkpoints ", GRAY), text(race.tag.checkpoints.size(), WHITE)));
+        player.sendMessage(textOfChildren(text("goodies ", GRAY), text(race.tag.goodies.size(), WHITE)));
+        player.sendMessage(textOfChildren(text("laps ", GRAY), text(race.tag.laps, WHITE)));
+        player.sendMessage(textOfChildren(text("racing ", GRAY), text(race.tag.countRacers(), WHITE)));
+        player.sendMessage(textOfChildren(text("maxDuration ", GRAY), text(race.formatTimeShort(race.tag.maxDuration * 1000L) + " (" + race.tag.maxDuration + ")", WHITE)));
         return true;
     }
 
@@ -204,7 +201,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         race.setSpawnLocation(player.getLocation());
         race.setSpawnArea(cuboid);
         race.save();
-        context.message(ChatColor.YELLOW + race.name + ": Spawn set to your WorldEdit selection and current location");
+        context.message(text(race.name + ": Spawn set to your WorldEdit selection and current location", YELLOW));
         return true;
     }
 
@@ -214,10 +211,10 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Race race = requireRace(player);
         if (race.tag.phase == Phase.EDIT) {
             race.setPhase(Phase.IDLE);
-            context.message("" + ChatColor.YELLOW + race.name + ": Edit mode disabled");
+            context.message(text(race.name + ": Edit mode disabled", YELLOW));
         } else {
             race.setPhase(Phase.EDIT);
-            context.message("" + ChatColor.YELLOW + race.name + ": Edit mode enabled");
+            context.message(text(race.name + ": Edit mode enabled", YELLOW));
         }
         return true;
     }
@@ -231,13 +228,14 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             if (laps <= 0) throw new CommandWarn("Not positive: " + laps);
             race.setLaps(laps);
             race.save();
-            context.message(ChatColor.YELLOW + race.name + ": Laps updated: " + laps);
+            context.message(text(race.name + ": Laps updated: " + laps, YELLOW));
         }
         race.startRace();
-        context.message(ChatColor.YELLOW + "Race started: "
-                        + (race.getRacers().stream()
-                           .map(racer -> racer.name)
-                           .collect(Collectors.joining(", "))));
+        final List<String> names = new ArrayList<>();
+        for (Racer racer : race.getRacers()) {
+            names.add(racer.getName());
+        }
+        context.message(text("Race started: " + String.join(", ", names), YELLOW));
         return true;
     }
 
@@ -246,10 +244,10 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Player player = context.requirePlayer();
         Race race = requireRace(player);
         List<Checkpoint> checkpoints = race.getCheckpoints();
-        context.message("" + ChatColor.YELLOW + race.name + ": " + checkpoints.size() + " checkpoint(s)");
+        context.message(text(race.name + ": " + checkpoints.size() + " checkpoint(s)", YELLOW));
         int i = 0;
         for (Checkpoint checkpoint : checkpoints) {
-            context.message("  " + (i++) + " " + ChatColor.YELLOW + checkpoint);
+            context.message(textOfChildren(text("  " + (i++)), text(" " + checkpoint, YELLOW)));
         }
         return true;
     }
@@ -269,7 +267,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         checkpoints.add(index, new Checkpoint(cuboid));
         race.setCheckpoints(checkpoints);
         race.save();
-        context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint added: " + cuboid);
+        context.message(text(race.name + ": Checkpoint added: " + cuboid, YELLOW));
         return true;
     }
 
@@ -281,7 +279,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         for (Checkpoint checkpoint : checkpoints) {
             if (checkpoint.area.contains(player.getLocation())) {
                 int index = checkpoints.indexOf(checkpoint);
-                context.message(ChatColor.YELLOW + "This is checkpoint #" + index + " " + checkpoint);
+                context.message(text("This is checkpoint #" + index + " " + checkpoint, YELLOW));
             }
         }
         return true;
@@ -306,7 +304,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         checkpoints.set(indexB, a);
         race.setCheckpoints(checkpoints);
         race.save();
-        context.message("" + ChatColor.YELLOW + race.name + ": Checkpoints swapped: " + indexA + ", " + indexB);
+        context.message(text(race.name + ": Checkpoints swapped: " + indexA + ", " + indexB, YELLOW));
         return true;
     }
 
@@ -322,7 +320,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Checkpoint old = checkpoints.remove(index);
         race.setCheckpoints(checkpoints);
         race.save();
-        context.message("" + ChatColor.YELLOW + race.name + ": Checkpoint #" + index + " removed: " + old);
+        context.message(text(race.name + ": Checkpoint #" + index + " removed: " + old, YELLOW));
         return true;
     }
 
@@ -336,7 +334,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             throw new CommandWarn("Invalid type: " + args[0]);
         }
         race.save();
-        context.message(ChatColor.YELLOW + race.name + ": Type updated: " + race.tag.type);
+        context.message(text(race.name + ": Type updated: " + race.tag.type, YELLOW));
         return true;
     }
 
@@ -346,7 +344,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Race race = requireRace(player);
         race.tag.laps = requireInt(args[0]);
         race.save();
-        context.message(ChatColor.YELLOW + race.name + ": Laps updated: " + race.tag.laps);
+        context.message(text(race.name + ": Laps updated: " + race.tag.laps, YELLOW));
         return true;
     }
 
@@ -372,7 +370,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Player player = context.requirePlayer();
         Race race = requireRace(player);
         race.stopRace();
-        context.message(ChatColor.YELLOW + "Race stopped: " + race.name);
+        context.message(text("Race stopped: " + race.name, YELLOW));
         race.save();
         return true;
     }
@@ -392,7 +390,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
                 }
             }
             if (count > 0) race.save();
-            player.sendMessage(ChatColor.YELLOW + "Start vectors added: " + count);
+            player.sendMessage(text("Start vectors added: " + count, YELLOW));
             return true;
         }
         case "remove": {
@@ -406,7 +404,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
                 }
             }
             if (count > 0) race.save();
-            player.sendMessage(ChatColor.YELLOW + "Start vectors removed: " + count);
+            player.sendMessage(text("Start vectors removed: " + count, YELLOW));
             return true;
         }
         case "clear": {
@@ -414,7 +412,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             int count = race.tag.startVectors.size();
             race.tag.startVectors.clear();
             if (count > 0) race.save();
-            player.sendMessage(ChatColor.YELLOW + "Start vectors cleared: " + count);
+            player.sendMessage(text("Start vectors cleared: " + count, YELLOW));
             return true;
         }
         default: return false;
@@ -433,7 +431,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             }
             race.tag.goodies.add(vec);
             race.save();
-            player.sendMessage(ChatColor.YELLOW + "Goodie added: " + vec);
+            player.sendMessage(text("Goodie added: " + vec, YELLOW));
             return true;
         }
         case "remove": {
@@ -444,7 +442,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             }
             race.tag.goodies.remove(vec);
             race.save();
-            player.sendMessage(ChatColor.YELLOW + "Goodie removed: " + vec);
+            player.sendMessage(text("Goodie removed: " + vec, YELLOW));
             return true;
         }
         case "clear": {
@@ -452,7 +450,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             int count = race.tag.goodies.size();
             race.tag.goodies.clear();
             if (count > 0) race.save();
-            player.sendMessage(ChatColor.YELLOW + "Goodies cleared: " + count);
+            player.sendMessage(text("Goodies cleared: " + count, YELLOW));
             return true;
         }
         default: return false;
@@ -475,7 +473,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
                 }
                 race.tag.coins.add(vec);
                 race.save();
-                player.sendMessage(ChatColor.YELLOW + "Coin added: " + vec);
+                player.sendMessage(text("Coin added: " + vec, YELLOW));
             } else {
                 int count = 0;
                 for (Vec3i vec : Cuboid.requireSelectionOf(player).enumerate()) {
@@ -559,7 +557,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Cuboid cuboid = Cuboid.requireSelectionOf(player);
         race.tag.area = cuboid;
         race.save();
-        player.sendMessage(ChatColor.GREEN + "Event area reset: " + race.tag.area);
+        player.sendMessage(text("Event area reset: " + race.tag.area, GREEN));
         return true;
     }
 
@@ -569,7 +567,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             throw new CommandWarn("Not mounted: " + race.tag.type);
         }
         race.tag.type.spawnVehicle(player.getLocation());
-        player.sendMessage(ChatColor.YELLOW + "Vehicle spawned");
+        player.sendMessage(text("Vehicle spawned", YELLOW));
         return true;
     }
 

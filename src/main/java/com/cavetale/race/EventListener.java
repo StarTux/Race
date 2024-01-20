@@ -461,7 +461,7 @@ public final class EventListener implements Listener {
         if (event.isGliding()) {
             Bukkit.getScheduler().runTask(plugin, () -> {
                     if (player.isGliding()) {
-                        player.boostElytra(new ItemStack(Material.FIREWORK_ROCKET));
+                        player.fireworkBoost(new ItemStack(Material.FIREWORK_ROCKET));
                     }
                 });
         }

@@ -30,7 +30,6 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -222,7 +221,7 @@ public final class Race {
             Player player = racer.getPlayer();
             Location location = player.getLocation();
             if (!racer.startVector.contains(location)) {
-                player.sendMessage(ChatColor.RED + "Please wait...");
+                player.sendMessage(text("Please wait...", RED));
                 player.teleport(getStartLocation(racer));
                 player.setAllowFlight(true);
                 player.setFlying(true);
@@ -460,7 +459,7 @@ public final class Race {
             }
         }
         if (tag.type == RaceType.ELYTRA && player.isGliding()) {
-            player.boostElytra(new ItemStack(Material.FIREWORK_ROCKET));
+            player.fireworkBoost(new ItemStack(Material.FIREWORK_ROCKET));
         }
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.1f, 2.0f);
     }

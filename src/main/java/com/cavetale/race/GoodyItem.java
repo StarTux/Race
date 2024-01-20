@@ -21,7 +21,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CrossbowMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
@@ -255,7 +254,7 @@ public enum GoodyItem {
 
     private static ItemStack potionItem(ItemStack itemStack, PotionType potionType) {
         PotionMeta meta = (PotionMeta) itemStack.getItemMeta();
-        meta.setBasePotionData(new PotionData(potionType));
+        meta.setBasePotionType(potionType);
         itemStack.setItemMeta(meta);
         return itemStack;
     }
@@ -264,7 +263,7 @@ public enum GoodyItem {
         ItemStack itemStack  = new ItemStack(material);
         itemStack.editMeta(meta -> {
                 if (meta instanceof PotionMeta potionMeta) {
-                    potionMeta.setBasePotionData(new PotionData(potionType));
+                    potionMeta.setBasePotionType(potionType);
                 }
             });
         return itemStack;
