@@ -408,12 +408,16 @@ public final class EventListener implements Listener {
     }
 
     @EventHandler
-    void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+    private void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
         if (NetworkServer.current() != NetworkServer.RACE) return;
         Race race = plugin.races.at(event.getPlayer().getLocation());
         if (race == null) return;
         if (event.getRightClicked().getType() == EntityType.BOAT) {
             if (race.tag.type == RaceType.BOAT || race.tag.type == RaceType.ICE_BOAT) {
+                event.setCancelled(true);
+            }
+        } else if (event.getRightClicked().getType() == EntityType.CAMEL) {
+            if (race.tag.type == RaceType.CAMEL) {
                 event.setCancelled(true);
             }
         }
