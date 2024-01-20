@@ -16,6 +16,10 @@ public final class Rnd {
         return RND.nextInt(in);
     }
 
+    public static boolean nextBoolean() {
+        return RND.nextBoolean();
+    }
+
     public static double nextDouble() {
         return RND.nextDouble();
     }

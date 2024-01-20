@@ -5,19 +5,22 @@ import com.cavetale.core.editor.EditMenuNode;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.race.util.Rnd;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.data.Levelled;
+import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Camel;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.Pig;
+import org.bukkit.entity.SkeletonHorse;
 import org.bukkit.entity.Strider;
 import org.bukkit.entity.Vehicle;
+import org.bukkit.entity.ZombieHorse;
 import org.bukkit.inventory.ItemStack;
 
 @RequiredArgsConstructor
@@ -28,6 +31,7 @@ public enum RaceType implements EditMenuAdapter {
     ICE_BOAT(() -> new ItemStack(Material.ICE)),
     BOAT(() -> new ItemStack(Material.OAK_BOAT)),
     HORSE(() -> new ItemStack(Material.IRON_HORSE_ARMOR)),
+    HALLOWEEN_HORSE(() -> new ItemStack(Material.ZOMBIE_HEAD)),
     PIG(() -> new ItemStack(Material.CARROT_ON_A_STICK)),
     ELYTRA(() -> new ItemStack(Material.ELYTRA)),
     BROOM(Mytems.WITCH_BROOM::createIcon),
@@ -84,8 +88,7 @@ public enum RaceType implements EditMenuAdapter {
             }
             return location.getWorld().spawn(location, Boat.class, e -> {
                     e.setPersistent(false);
-                    Boat.Type[] types = Boat.Type.values();
-                    Boat.Type theType = types[ThreadLocalRandom.current().nextInt(types.length)];
+                    Boat.Type theType = Rnd.pick(Boat.Type.values());
                     e.setBoatType(theType);
                 });
         }
@@ -105,6 +108,23 @@ public enum RaceType implements EditMenuAdapter {
                     e.getInventory().setSaddle(new ItemStack(Material.SADDLE));
                 });
             return horse;
+        }
+        case HALLOWEEN_HORSE: {
+            final Consumer<AbstractHorse> horseConsumer = (AbstractHorse e) -> {
+                e.setPersistent(false);
+                e.setAdult();
+                e.setAgeLock(true);
+                double variance = 0.01;
+                e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3375);
+                e.getAttribute(Attribute.HORSE_JUMP_STRENGTH).setBaseValue(0.7);
+                e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
+                e.setHealth(20.0);
+                e.setTamed(true);
+                e.getInventory().setSaddle(new ItemStack(Material.SADDLE));
+            };
+            return Rnd.nextBoolean()
+                ? location.getWorld().spawn(location, SkeletonHorse.class, e -> horseConsumer.accept(e))
+                : location.getWorld().spawn(location, ZombieHorse.class, e -> horseConsumer.accept(e));
         }
         case CAMEL: {
             Camel camel = location.getWorld().spawn(location, Camel.class, e -> {
