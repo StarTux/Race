@@ -3,6 +3,7 @@ package com.cavetale.race;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.Unicode;
+import com.cavetale.core.money.Money;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.struct.Vec3i;
@@ -403,47 +404,7 @@ public final class Race {
                 tag.rareItemsAvailable += 1;
             }
             if (racer.lap >= tag.laps) {
-                racer.finished = true;
-                racer.finishTime = System.currentTimeMillis() - tag.startTime;
-                racer.finishIndex = tag.finishIndex++;
-                if (player.getVehicle() != null) player.getVehicle().remove();
-                final String timeString = formatTime(racer.finishTime);
-                final String rankString = "" + (racer.finishIndex + 1);
-                plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + rankString + " " + timeString);
-                if (plugin.save.event) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
-                    int score = getEventScore(racer.finishIndex);
-                    int totalScore = plugin.save.scores.compute(player.getUniqueId(), (u, i) -> (i != null ? i : 0) + score);
-                    player.sendMessage(text().color(GOLD)
-                                       .append(text("You earned "))
-                                       .append(text(score, BLUE))
-                                       .append(text(" points for a total of "))
-                                       .append(text(totalScore, BLUE)));
-                    if (racer.finishIndex == 0) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " "
-                                               + String.join(" ", tag.type.getWinnerTitles()));
-                    }
-                }
-                player.showTitle(title(textOfChildren(Glyph.toComponent(rankString), text(st(rankString), GRAY)),
-                                       text(timeString, GREEN),
-                                       times(Duration.ofMillis(500), Duration.ofSeconds(2), Duration.ofMillis(500))));
-                player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 2.0f);
-                for (Player target : getPresentPlayers()) {
-                    target.sendMessage("");
-                    target.sendMessage(textOfChildren(tag.type.getCoinItem(),
-                                                      space(),
-                                                      player.displayName(),
-                                                      text(" finished #", GRAY),
-                                                      Glyph.toComponent(rankString),
-                                                      text(" in ", GRAY),
-                                                      text(timeString, GREEN)));
-                    target.sendMessage("");
-                }
-                player.setGameMode(GameMode.SPECTATOR);
-                player.setWalkSpeed(0.2f);
-                player.setFlySpeed(0.1f);
-                if (player.getVehicle() != null) player.getVehicle().remove();
-                clearInventory(player);
+                onFinish(player, racer);
             } else {
                 final long now = System.currentTimeMillis();
                 final long lapTime = now - racer.lapStartTime;
@@ -462,6 +423,60 @@ public final class Race {
             player.fireworkBoost(new ItemStack(Material.FIREWORK_ROCKET));
         }
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 0.1f, 2.0f);
+    }
+
+    private void onFinish(Player player, Racer racer) {
+        racer.finished = true;
+        racer.finishTime = System.currentTimeMillis() - tag.startTime;
+        racer.finishIndex = tag.finishIndex++;
+        if (player.getVehicle() != null) player.getVehicle().remove();
+        final String timeString = formatTime(racer.finishTime);
+        final String rankString = "" + (racer.finishIndex + 1);
+        plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + rankString + " " + timeString);
+        if (plugin.save.event) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+            int score = getEventScore(racer.finishIndex);
+            int totalScore = plugin.save.scores.compute(player.getUniqueId(), (u, i) -> (i != null ? i : 0) + score);
+            player.sendMessage(text().color(GOLD)
+                               .append(text("You earned "))
+                               .append(text(score, BLUE))
+                               .append(text(" points for a total of "))
+                               .append(text(totalScore, BLUE)));
+            if (racer.finishIndex == 0) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + player.getName() + " "
+                                       + String.join(" ", tag.type.getWinnerTitles()));
+            }
+            final int money = switch (racer.finishIndex) {
+            case 0 -> 10_000;
+            case 1 -> 5000;
+            case 2 -> 2000;
+            default -> 1000;
+            } + racer.coins * 100;
+            if (money > 0) {
+                plugin.getLogger().info(player.getName() + " receives " + money + " Coins");
+                Money.get().give(player.getUniqueId(), (double) money, plugin, "Grand Prix");
+            }
+        }
+        player.showTitle(title(textOfChildren(Glyph.toComponent(rankString), text(st(rankString), GRAY)),
+                               text(timeString, GREEN),
+                               times(Duration.ofMillis(500), Duration.ofSeconds(2), Duration.ofMillis(500))));
+        player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 2.0f);
+        for (Player target : getPresentPlayers()) {
+            target.sendMessage("");
+            target.sendMessage(textOfChildren(tag.type.getCoinItem(),
+                                              space(),
+                                              player.displayName(),
+                                              text(" finished #", GRAY),
+                                              Glyph.toComponent(rankString),
+                                              text(" in ", GRAY),
+                                              text(timeString, GREEN)));
+            target.sendMessage("");
+        }
+        player.setGameMode(GameMode.SPECTATOR);
+        player.setWalkSpeed(0.2f);
+        player.setFlySpeed(0.1f);
+        if (player.getVehicle() != null) player.getVehicle().remove();
+        clearInventory(player);
     }
 
     private void tickRace(int ticks) {
