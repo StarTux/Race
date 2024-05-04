@@ -451,7 +451,7 @@ public final class Race {
             case 1 -> 5000;
             case 2 -> 2000;
             default -> 1000;
-            } + racer.coins * 10;
+            } + (racer.coins * 10);
             if (money > 0) {
                 plugin.getLogger().info(player.getName() + " receives " + money + " Coins");
                 Money.get().give(player.getUniqueId(), (double) money, plugin, "Grand Prix");
