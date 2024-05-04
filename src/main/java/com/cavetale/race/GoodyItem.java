@@ -1,7 +1,6 @@
 package com.cavetale.race;
 
 import com.cavetale.mytems.Mytems;
-import com.cavetale.mytems.util.Items;
 import com.cavetale.worldmarker.util.Tags;
 import java.util.List;
 import java.util.function.Supplier;
@@ -24,6 +23,7 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
+import static com.cavetale.mytems.util.Items.tooltip;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static org.bukkit.Sound.*;
@@ -220,7 +220,7 @@ public enum GoodyItem {
     }
 
     public ItemStack createItemStack(ItemStack base) {
-        ItemStack result = Items.text(base, lore);
+        ItemStack result = tooltip(base, lore);
         result.editMeta(meta -> {
                 Tags.set(meta.getPersistentDataContainer(),
                          new NamespacedKey(RacePlugin.instance, "goody"),
