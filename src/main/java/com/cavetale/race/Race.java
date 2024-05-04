@@ -775,7 +775,7 @@ public final class Race {
             if (tag.type == RaceType.PIG) {
                 player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
             }
-            player.getInventory().setItem(8, GoodyItem.RETURN.createItemStack());
+            player.getInventory().setItem(0, GoodyItem.RETURN.createItemStack());
             if (tag.type == RaceType.HORSE) {
                 player.getInventory().setHelmet(Mytems.COWBOY_HAT.createItemStack());
             } else if (tag.type == RaceType.CAMEL) {
