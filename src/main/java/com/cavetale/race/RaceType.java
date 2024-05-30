@@ -101,7 +101,7 @@ public enum RaceType implements EditMenuAdapter {
                     e.setStyle(Rnd.pick(Horse.Style.values()));
                     double variance = 0.01;
                     e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3375);
-                    e.getAttribute(Attribute.HORSE_JUMP_STRENGTH).setBaseValue(0.7);
+                    e.getAttribute(Attribute.GENERIC_JUMP_STRENGTH).setBaseValue(0.7);
                     e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
                     e.setHealth(20.0);
                     e.setTamed(true);
@@ -116,7 +116,7 @@ public enum RaceType implements EditMenuAdapter {
                 e.setAgeLock(true);
                 double variance = 0.01;
                 e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3375);
-                e.getAttribute(Attribute.HORSE_JUMP_STRENGTH).setBaseValue(0.7);
+                e.getAttribute(Attribute.GENERIC_JUMP_STRENGTH).setBaseValue(0.7);
                 e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
                 e.setHealth(20.0);
                 e.setTamed(true);

@@ -59,7 +59,7 @@ public enum GoodyItem {
              return true;
          }),
     HEAL(Category.LIVING,
-         () -> potionItem(Material.POTION, PotionType.INSTANT_HEAL),
+         () -> potionItem(Material.POTION, PotionType.HEALING),
          List.of(text("Health Boost", AQUA)),
          (race, player, racer) -> 1.0,
          (race, player, racer, item) -> {
@@ -76,7 +76,7 @@ public enum GoodyItem {
              return true;
          }),
     SPEED(Category.LIVING,
-          () -> potionItem(Material.POTION, PotionType.SPEED),
+          () -> potionItem(Material.POTION, PotionType.SWIFTNESS),
           List.of(text("Speed Boost", BLUE)),
           (race, player, racer) -> {
               return switch (racer.rank) {
@@ -94,7 +94,6 @@ public enum GoodyItem {
                   Location loc = player.getLocation();
                   Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());
                   player.playSound(loc, ENTITY_PLAYER_SPLASH_HIGH_SPEED, 2.0f, 2.0f);
-                  player.spawnParticle(Particle.SPELL_MOB, locAhead, 32, 0.5, 0.5, 0.5, 1.0);
                   player.sendMessage(text("Your ride got a speed boost!", BLUE));
               }
               return true;
@@ -136,7 +135,7 @@ public enum GoodyItem {
              Entity vehicle = player.getVehicle();
              if (vehicle instanceof LivingEntity target) {
                  target.removePotionEffect(PotionEffectType.POISON);
-                 target.removePotionEffect(PotionEffectType.SLOW);
+                 target.removePotionEffect(PotionEffectType.SLOWNESS);
                  target.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,
                                                          duration, 0, true, true, true));
              } else if (vehicle != null) {

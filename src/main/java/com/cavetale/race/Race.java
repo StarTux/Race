@@ -53,8 +53,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -147,7 +147,7 @@ public final class Race {
     private void tickEdit(int ticks) {
         World world = getWorld();
         tag.area.highlight(world, ticks, 4, 1, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
-        tag.spawnArea.highlight(world, ticks, 4, 4, loc -> world.spawnParticle(Particle.VILLAGER_HAPPY, loc, 1, 0.0, 0.0, 0.0, 0.0));
+        tag.spawnArea.highlight(world, ticks, 4, 4, loc -> world.spawnParticle(Particle.HAPPY_VILLAGER, loc, 1, 0.0, 0.0, 0.0, 0.0));
         for (Checkpoint checkpoint : tag.checkpoints) {
             checkpoint.area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         }
@@ -535,7 +535,7 @@ public final class Race {
             if ((ticks % 20) == 0) {
                 List<Vec3i> vecs = checkpoint.area.enumerate();
                 Location particleLocation = Rnd.pick(vecs).toCenterLocation(getWorld()).add(0.0, 0.5, 0.0);
-                player.spawnParticle(Particle.FIREWORKS_SPARK, particleLocation, 20, 0.0, 0.0, 0.0, 0.2);
+                player.spawnParticle(Particle.FIREWORK, particleLocation, 20, 0.0, 0.0, 0.0, 0.2);
             }
             Vector playerDirection = loc.getDirection();
             Vec3i direction = center.subtract(pos);
@@ -1356,7 +1356,7 @@ public final class Race {
         Racer racer = getRacer(player);
         if (racer == null || !racer.racing) return;
         if (tag.type == RaceType.SONIC) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 15, 1, true, false, true));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 15, 1, true, false, true));
         }
     }
 
