@@ -16,10 +16,13 @@ import java.util.Arrays;
 import java.util.List;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
+import static net.kyori.adventure.text.event.ClickEvent.suggestCommand;
+import static net.kyori.adventure.text.event.HoverEvent.showText;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
@@ -63,23 +66,41 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             .caller(this::laps);
         rootNode.addChild("editor")
             .playerCaller(this::editor);
-        CommandNode checkpointNode = rootNode.addChild("checkpoint")
+        // Checkpoints
+        CommandNode checkpointNode = rootNode.addChild("cp")
+            .alias("checkpoint")
             .description("Checkpoint commands");
-        checkpointNode.addChild("list")
+        checkpointNode.addChild("list").denyTabCompletion()
             .description("List all checkpoints")
-            .caller(this::checkpointList);
-        checkpointNode.addChild("add")
+            .playerCaller(this::checkpointList);
+        checkpointNode.addChild("add").arguments("[index]")
+            .completers(this::completeCheckpointIndex)
             .description("Add a new checkpoint")
-            .caller(this::checkpointAdd);
-        checkpointNode.addChild("remove")
+            .playerCaller(this::checkpointAdd);
+        checkpointNode.addChild("remove").arguments("<index>")
+            .completers(this::completeCheckpointIndex)
             .description("Remove a checkpoint")
-            .caller(this::checkpointRemove);
-        checkpointNode.addChild("info")
-            .description("Info about current checkpoint")
-            .caller(this::checkpointInfo);
-        checkpointNode.addChild("swap")
+            .playerCaller(this::checkpointRemove);
+        checkpointNode.addChild("info").arguments("<index>")
+            .completers(this::completeCheckpointIndex)
+            .description("Print checkpoint info info")
+            .playerCaller(this::checkpointInfo);
+        checkpointNode.addChild("swap").arguments("<from> <to>")
+            .completers(this::completeCheckpointIndex)
             .description("Swap two checkpoints")
-            .caller(this::checkpointSwap);
+            .playerCaller(this::checkpointSwap);
+        checkpointNode.addChild("here").denyTabCompletion()
+            .description("Print checkpoints at your current location")
+            .playerCaller(this::checkpointHere);
+        checkpointNode.addChild("tp").arguments("<index>")
+            .completers(this::completeCheckpointIndex)
+            .description("Teleport to a checkpoint")
+            .playerCaller(this::checkpointTeleport);
+        checkpointNode.addChild("set").arguments("<index>")
+            .completers(this::completeCheckpointIndex)
+            .description("Update a checkpoint with a new area")
+            .playerCaller(this::checkpointSet);
+        //
         rootNode.addChild("startvector")
             .completableList(Arrays.asList("clear", "add", "remove"))
             .caller(this::startvector);
@@ -239,22 +260,37 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         return true;
     }
 
-    private boolean checkpointList(CommandContext context, CommandNode node, String[] args) {
-        if (args.length != 0) return false;
-        Player player = context.requirePlayer();
-        Race race = requireRace(player);
-        List<Checkpoint> checkpoints = race.getCheckpoints();
-        context.message(text(race.name + ": " + checkpoints.size() + " checkpoint(s)", YELLOW));
-        int i = 0;
-        for (Checkpoint checkpoint : checkpoints) {
-            context.message(textOfChildren(text("  " + (i++)), text(" " + checkpoint, YELLOW)));
+    private List<String> completeCheckpointIndex(CommandContext context, CommandNode node, String arg) {
+        if (!context.isPlayer()) return List.of();
+        final Race race = plugin.races.at(context.player.getLocation());
+        if (race == null) return List.of();
+        final int size = race.getCheckpoints().size();
+        final List<String> result = new ArrayList<>(size);
+        for (int i = 0; i < size; i += 1) {
+            final String name = "" + i;
+            if (name.contains(arg)) {
+                result.add(name);
+            }
         }
-        return true;
+        return result;
     }
 
-    private boolean checkpointAdd(CommandContext context, CommandNode node, String[] args) {
+    private void checkpointList(Player player) {
+        Race race = requireRace(player);
+        List<Checkpoint> checkpoints = race.getCheckpoints();
+        player.sendMessage(text(race.name + ": " + checkpoints.size() + " checkpoint(s)", YELLOW));
+        for (int i = 0; i < checkpoints.size(); i += 1) {
+            final Checkpoint checkpoint = checkpoints.get(i);
+            final String cmd = "/raceedit cp tp " + i;
+            player.sendMessage(textOfChildren(text(" " + i), text(" " + checkpoint, YELLOW))
+                               .insertion(cmd)
+                               .hoverEvent(showText(text(cmd, GRAY)))
+                               .clickEvent(suggestCommand(cmd)));
+        }
+    }
+
+    private boolean checkpointAdd(Player player, String[] args) {
         if (args.length > 1) return false;
-        Player player = context.requirePlayer();
         Race race = requireRace(player);
         Cuboid cuboid = Cuboid.requireSelectionOf(player);
         List<Checkpoint> checkpoints = race.getCheckpoints();
@@ -267,27 +303,46 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         checkpoints.add(index, new Checkpoint(cuboid));
         race.setCheckpoints(checkpoints);
         race.save();
-        context.message(text(race.name + ": Checkpoint added: " + cuboid, YELLOW));
+        final String cmd = "/raceedit cp tp " + index;
+        player.sendMessage(text(race.name + ": Checkpoint added: " + cuboid, YELLOW)
+                           .insertion(cmd)
+                           .hoverEvent(showText(text(cmd, GRAY)))
+                           .clickEvent(suggestCommand(cmd)));
         return true;
     }
 
-    private boolean checkpointInfo(CommandContext context, CommandNode node, String[] args) {
-        if (args.length != 0) return false;
-        Player player = context.requirePlayer();
+    private boolean checkpointRemove(Player player, String[] args) {
+        if (args.length != 1) return false;
         Race race = requireRace(player);
         List<Checkpoint> checkpoints = race.getCheckpoints();
-        for (Checkpoint checkpoint : checkpoints) {
-            if (checkpoint.area.contains(player.getLocation())) {
-                int index = checkpoints.indexOf(checkpoint);
-                context.message(text("This is checkpoint #" + index + " " + checkpoint, YELLOW));
-            }
+        int index = requireInt(args[0]);
+        if (index < 0 || index >= checkpoints.size()) {
+            throw new CommandWarn("Out of bounds: " + index);
         }
+        Checkpoint old = checkpoints.remove(index);
+        race.setCheckpoints(checkpoints);
+        race.save();
+        player.sendMessage(text(race.name + ": Checkpoint #" + index + " removed: " + old, YELLOW));
         return true;
     }
 
-    private boolean checkpointSwap(CommandContext context, CommandNode node, String[] args) {
+    private boolean checkpointInfo(Player player, String[] args) {
+        if (args.length != 1) return false;
+        final Race race = requireRace(player);
+        final int index = CommandArgCompleter.requireInt(args[0], i -> i >= 0 && i < race.getCheckpoints().size());
+        final Checkpoint checkpoint = race.getCheckpoints().get(index);
+        final String cmd = "/raceedit cp tp " + index;
+        player.sendMessage(textOfChildren(text(race.name + ":", YELLOW),
+                                          text(" checkpoint #" + index, GRAY),
+                                          text(" " + checkpoint, WHITE))
+                           .insertion(cmd)
+                           .hoverEvent(showText(text(cmd, GRAY)))
+                           .clickEvent(suggestCommand(cmd)));
+        return true;
+    }
+
+    private boolean checkpointSwap(Player player, String[] args) {
         if (args.length != 2) return false;
-        Player player = context.requirePlayer();
         Race race = requireRace(player);
         List<Checkpoint> checkpoints = race.getCheckpoints();
         int indexA = requireInt(args[0]);
@@ -304,23 +359,62 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         checkpoints.set(indexB, a);
         race.setCheckpoints(checkpoints);
         race.save();
-        context.message(text(race.name + ": Checkpoints swapped: " + indexA + ", " + indexB, YELLOW));
+        player.sendMessage(text(race.name + ": Checkpoints swapped: " + indexA + ", " + indexB, YELLOW));
         return true;
     }
 
-    private boolean checkpointRemove(CommandContext context, CommandNode node, String[] args) {
-        if (args.length != 1) return false;
-        Player player = context.requirePlayer();
-        Race race = requireRace(player);
-        List<Checkpoint> checkpoints = race.getCheckpoints();
-        int index = requireInt(args[0]);
-        if (index < 0 || index >= checkpoints.size()) {
-            throw new CommandWarn("Out of bounds: " + index);
+    private void checkpointHere(Player player) {
+        final Race race = requireRace(player);
+        final List<Checkpoint> checkpoints = race.getCheckpoints();
+        final Location location = player.getLocation();
+        int count = 0;
+        for (int i = 0; i < checkpoints.size(); i += 1) {
+            Checkpoint cp = checkpoints.get(i);
+            if (!cp.getArea().contains(location)) continue;
+            final String cmd = "/raceedit cp tp " + i;
+            player.sendMessage(textOfChildren(text(race.name + ":", YELLOW),
+                                              text("Checkpoint here: ", GRAY),
+                                              text("#" + i, YELLOW))
+                               .insertion(cmd)
+                               .hoverEvent(showText(text(cmd, GRAY)))
+                               .clickEvent(suggestCommand(cmd)));
+            count += 1;
         }
-        Checkpoint old = checkpoints.remove(index);
+        if (count == 0) {
+            throw new CommandWarn("There are no checkpoints here");
+        }
+    }
+
+    private boolean checkpointTeleport(Player player, String[] args) {
+        if (args.length != 1) return false;
+        final Race race = requireRace(player);
+        final int index = CommandArgCompleter.requireInt(args[0], i -> i >= 0 && i < race.getCheckpoints().size());
+        final Checkpoint checkpoint = race.getCheckpoints().get(index);
+        final Location location = checkpoint.getArea().getCenterExact().toLocation(player.getWorld());
+        player.teleport(location);
+        final String cmd = "/raceedit cp tp " + index;
+        player.sendMessage(textOfChildren(text("Teleported to checkpoint #" + index, YELLOW),
+                                          text(" " + checkpoint, WHITE))
+                           .insertion(cmd)
+                           .hoverEvent(showText(text(cmd, GRAY)))
+                           .clickEvent(suggestCommand(cmd)));
+        return true;
+    }
+
+    private boolean checkpointSet(Player player, String[] args) {
+        if (args.length != 1) return false;
+        final Race race = requireRace(player);
+        final List<Checkpoint> checkpoints = race.getCheckpoints();
+        final int index = CommandArgCompleter.requireInt(args[0], i -> i >= 0 && i < checkpoints.size());
+        final Cuboid selection = Cuboid.requireSelectionOf(player);
+        checkpoints.set(index, new Checkpoint(selection));
         race.setCheckpoints(checkpoints);
         race.save();
-        context.message(text(race.name + ": Checkpoint #" + index + " removed: " + old, YELLOW));
+        final String cmd = "/raceedit cp tp " + index;
+        player.sendMessage(text("Updated checkpoint #" + index + ": " + selection, YELLOW)
+                           .insertion(cmd)
+                           .hoverEvent(showText(text(cmd, GRAY)))
+                           .clickEvent(suggestCommand(cmd)));
         return true;
     }
 

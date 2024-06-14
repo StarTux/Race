@@ -1,9 +1,12 @@
 package com.cavetale.race;
 
 import com.cavetale.core.struct.Cuboid;
+import java.io.Serializable;
 import java.util.List;
+import lombok.Data;
 
-public final class Checkpoint {
+@Data
+public final class Checkpoint implements Serializable {
     protected int ax;
     protected int ay;
     protected int az;
