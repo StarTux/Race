@@ -149,7 +149,8 @@ public final class Race {
         clearEntities();
         switch (newPhase) {
         case FINISH:
-            MapReview.start(world, buildWorld);
+            MapReview.start(world, buildWorld)
+                .remindAllOnce();
             break;
         default:
             break;
@@ -1243,8 +1244,9 @@ public final class Race {
                                                text(subscript(st(rank) + "/" + tag.racers.size()), GRAY)));
         }
         if (tag.laps > 1) {
+            final int showLap = Math.min(tag.laps, racer.lap + 1);
             titleComponents.add(textOfChildren(text(tiny("lap"), GRAY),
-                                               text(superscript(racer.lap + 1) + "/" + subscript(tag.laps), GOLD)));
+                                               text(superscript(showLap) + "/" + subscript(tag.laps), GOLD)));
         }
         String timeString = String.format("%02d'%02d\"%03d", minutes, seconds % 60L, time % 1000L);
         titleComponents.add(textOfChildren(text(tiny("time"), GRAY),
