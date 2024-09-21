@@ -8,6 +8,7 @@ import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.playercache.PlayerCache;
 import com.winthier.creative.BuildWorld;
 import com.winthier.creative.file.Files;
+import com.winthier.creative.review.MapReview;
 import com.winthier.creative.vote.MapVote;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +37,9 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
         rootNode.addChild("startvote").denyTabCompletion()
             .description("Start a map vote")
             .senderCaller(this::startVote);
+        rootNode.addChild("startreview").denyTabCompletion()
+            .description("Start a map review")
+            .playerCaller(this::startReview);
         rootNode.addChild("stop").denyTabCompletion()
             .description("Stop current race")
             .playerCaller(this::stop);
@@ -90,6 +94,14 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
                 v.setCallback(result -> plugin.getRaces().start(result.getLocalWorldCopy(), result.getBuildWorldWinner()));
             });
         sender.sendMessage(text("Map vote started", YELLOW));
+    }
+
+    private void startReview(Player player) {
+        final Race race = plugin.getRaces().inWorld(player.getWorld());
+        if (race == null) throw new CommandWarn("There is no race here");
+        MapReview.start(race.getWorld(), race.getBuildWorld())
+            .remindAllOnce();
+        player.sendMessage(text("Map Review started", YELLOW));
     }
 
     private void stop(Player player) {

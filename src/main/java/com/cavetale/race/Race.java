@@ -147,14 +147,6 @@ public final class Race {
         tag.phase = newPhase;
         tag.phaseTicks = 0;
         clearEntities();
-        switch (newPhase) {
-        case FINISH:
-            MapReview.start(world, buildWorld)
-                .remindAllOnce();
-            break;
-        default:
-            break;
-        }
     }
 
     private void tickEdit(int ticks) {
@@ -504,6 +496,8 @@ public final class Race {
                 }
                 stopRace();
                 setPhase(Phase.FINISH);
+                MapReview.start(world, buildWorld)
+                    .remindAllOnce();
             }
         }
         for (Player player : world.getPlayers()) {
