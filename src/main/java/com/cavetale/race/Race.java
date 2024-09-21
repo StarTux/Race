@@ -7,6 +7,7 @@ import com.cavetale.core.money.Money;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.struct.Vec3i;
+import com.cavetale.core.util.Json;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.item.WardrobeItem;
 import com.cavetale.mytems.item.font.Glyph;
@@ -14,6 +15,9 @@ import com.cavetale.mytems.item.medieval.WitchBroom;
 import com.cavetale.mytems.util.Entities;
 import com.cavetale.race.util.Rnd;
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import com.winthier.creative.BuildWorld;
+import com.winthier.creative.file.Files;
+import com.winthier.creative.review.MapReview;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,6 +30,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -85,10 +90,14 @@ import static net.kyori.adventure.title.Title.Times.times;
 import static net.kyori.adventure.title.Title.title;
 import static org.bukkit.attribute.Attribute.*;
 
+@Getter
 @RequiredArgsConstructor
 public final class Race {
     private final RacePlugin plugin;
-    protected final String name;
+    private final BuildWorld buildWorld;
+    protected final String worldName;
+    private final World world;
+    private final File saveFile;
     protected final Tag tag;
     protected Map<Vec3i, Goody> goodies = new HashMap<>();
     protected Map<Vec3i, Goody> coins = new HashMap<>();
@@ -120,14 +129,10 @@ public final class Race {
     }
 
     private void log(String msg) {
-        plugin.getLogger().info("[" + name + "] " + msg);
+        plugin.getLogger().info("[" + worldName + "] " + msg);
     }
 
     protected void tick(int ticks) {
-        if (getWorld() == null) {
-            setPhase(Phase.IDLE);
-            return;
-        }
         switch (tag.phase) {
         case EDIT: tickEdit(ticks); break;
         case START: tickStart(ticks); break;
@@ -138,22 +143,28 @@ public final class Race {
         tag.phaseTicks += 1;
     }
 
-    public void setPhase(final Phase phase) {
-        tag.phase = phase;
+    public void setPhase(final Phase newPhase) {
+        tag.phase = newPhase;
         tag.phaseTicks = 0;
         clearEntities();
+        switch (newPhase) {
+        case FINISH:
+            MapReview.start(world, buildWorld);
+            break;
+        default:
+            break;
+        }
     }
 
     private void tickEdit(int ticks) {
-        World world = getWorld();
         tag.area.highlight(world, ticks, 4, 1, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         tag.spawnArea.highlight(world, ticks, 4, 4, loc -> world.spawnParticle(Particle.HAPPY_VILLAGER, loc, 1, 0.0, 0.0, 0.0, 0.0));
         for (Checkpoint checkpoint : tag.checkpoints) {
             checkpoint.area.highlight(world, ticks, 4, 8, loc -> world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0));
         }
         for (Vec3i v : tag.startVectors) {
-            Location loc = v.toCenterFloorLocation(getWorld());
-            loc.getWorld().spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0);
+            Location loc = v.toCenterFloorLocation(world);
+            world.spawnParticle(Particle.END_ROD, loc, 1, 0.0, 0.0, 0.0, 0.0);
         }
         updateEntities();
     }
@@ -266,14 +277,14 @@ public final class Race {
         goody.entity.remove();
         goody.entity = null;
         goody.cooldown = 40;
-        Firework firework = loc.getWorld().spawn(loc.add(0, 2, 0), Firework.class, e -> {
+        Firework firework = world.spawn(loc.add(0, 2, 0), Firework.class, e -> {
                 e.setPersistent(false);
                 Entities.setTransient(e);
                 e.setFireworkMeta(Fireworks.simpleFireworkMeta());
             });
         firework.detonate();
         giveGoody(player, racer);
-        loc.getWorld().playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 1.0f, 2.0f);
+        world.playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 1.0f, 2.0f);
         racer.goodyCooldown = System.currentTimeMillis() + 3000L;
     }
 
@@ -326,7 +337,7 @@ public final class Race {
         coin.entity = null;
         coin.cooldown = 20 * 10;
         setCoins(player, racer, racer.coins + 1);
-        loc.getWorld().playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 0.1f, 2.0f);
+        world.playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 0.1f, 2.0f);
         player.setFoodLevel(20);
         player.setSaturation(20f);
         if (tag.type.playerIsDamageable()) {
@@ -432,11 +443,11 @@ public final class Race {
         if (player.getVehicle() != null) player.getVehicle().remove();
         final String timeString = formatTime(racer.finishTime);
         final String rankString = "" + (racer.finishIndex + 1);
-        plugin.getLogger().info("[" + name + "] " + player.getName() + " finished #" + rankString + " " + timeString);
-        if (plugin.save.event) {
+        plugin.getLogger().info("[" + worldName + "] " + player.getName() + " finished #" + rankString + " " + timeString);
+        if (plugin.getSave().isEvent()) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
             int score = getEventScore(racer.finishIndex);
-            int totalScore = plugin.save.scores.compute(player.getUniqueId(), (u, i) -> (i != null ? i : 0) + score);
+            int totalScore = plugin.getSave().getScores().compute(player.getUniqueId(), (u, i) -> (i != null ? i : 0) + score);
             player.sendMessage(text().color(GOLD)
                                .append(text("You earned "))
                                .append(text(score, BLUE))
@@ -491,9 +502,10 @@ public final class Race {
                     player.sendMessage(text("Timeout! The race is over", RED));
                 }
                 stopRace();
+                setPhase(Phase.FINISH);
             }
         }
-        for (Player player : getWorld().getPlayers()) {
+        for (Player player : world.getPlayers()) {
             if (getRacer(player) != null) continue;
             if (!tag.area.contains(player.getLocation())) continue;
             if (player.isOp()) continue;
@@ -534,7 +546,7 @@ public final class Race {
             racer.checkpointDistance = pos.distanceSquared(center);
             if ((ticks % 20) == 0) {
                 List<Vec3i> vecs = checkpoint.area.enumerate();
-                Location particleLocation = Rnd.pick(vecs).toCenterLocation(getWorld()).add(0.0, 0.5, 0.0);
+                Location particleLocation = Rnd.pick(vecs).toCenterLocation(world).add(0.0, 0.5, 0.0);
                 player.spawnParticle(Particle.FIREWORK, particleLocation, 20, 0.0, 0.0, 0.0, 0.2);
             }
             Vector playerDirection = loc.getDirection();
@@ -572,7 +584,7 @@ public final class Race {
         }
         if (tag.type == RaceType.ELYTRA) {
             if (player.isGliding()) {
-                getWorld().spawnParticle(Particle.WAX_OFF, player.getLocation(), 1, 0.0, 0.0, 0.0, 0.0);
+                world.spawnParticle(Particle.WAX_OFF, player.getLocation(), 1, 0.0, 0.0, 0.0, 0.0);
             }
         }
         if (tag.type.isMounted()) {
@@ -618,7 +630,7 @@ public final class Race {
         Vec3i pos = Vec3i.of(racer.getPlayer().getLocation().getBlock());
         racer.checkpointDistance = pos.distanceSquared(center);
         Player player = racer.getPlayer();
-        player.setCompassTarget(center.toBlock(getWorld()).getLocation());
+        player.setCompassTarget(center.toBlock(world).getLocation());
     }
 
     protected static boolean containsHorizontal(Cuboid cuboid, Location location) {
@@ -635,7 +647,7 @@ public final class Race {
             && z >= cuboid.az && z <= cuboid.bz;
     }
 
-    void pruneRacers() {
+    protected void pruneRacers() {
         tag.racers.removeIf(racer -> {
                 if (racer.finished) return false;
                 Player player = racer.getPlayer();
@@ -653,27 +665,30 @@ public final class Race {
             });
     }
 
-    void tickFinish(int ticks) {
-    }
-
-    public File getSaveFile() {
-        return new File(plugin.getSaveFolder(), name + ".json");
+    protected void tickFinish(int ticks) {
+        if (tag.phaseTicks < 20 * 60) return;
+        MapReview.stop(world);
+        setPhase(Phase.IDLE);
+        if (plugin.isRaceServer()) {
+            if (plugin.getSave().isEvent()) {
+                plugin.scoreRanking(false);
+            }
+            removeAllPlayers();
+            plugin.getRaces().unloadWorld(world);
+            Files.deleteWorld(world);
+        }
     }
 
     public void save() {
-        Json.save(getSaveFile(), tag, true);
+        Json.save(saveFile, tag, true);
     }
 
-    public World getWorld() {
-        return Bukkit.getWorld(tag.worldName);
+    public boolean isIn(World theWorld) {
+        return theWorld.equals(world);
     }
 
-    public boolean isIn(World world) {
-        return tag.worldName.equals(world.getName());
-    }
-
-    public boolean isIn(String worldName) {
-        return tag.worldName.equals(worldName);
+    public boolean isIn(String theWorldName) {
+        return worldName.equals(theWorldName);
     }
 
     public Location getSpawnLocation() {
@@ -683,16 +698,12 @@ public final class Race {
     public String listString() {
         return tag.phase
             + " " + tag.type
-            + " " + name
-            + " " + tag.worldName;
+            + " w:" + worldName
+            + " bw:" + buildWorld.getPath();
     }
 
     public void setArea(Cuboid cuboid) {
         tag.area = cuboid;
-    }
-
-    public void setWorld(World world) {
-        tag.worldName = world.getName();
     }
 
     public void setSpawnLocation(Location loc) {
@@ -740,12 +751,15 @@ public final class Race {
     }
 
     public void startRace() {
+        startRace(getEligiblePlayers());
+    }
+
+    public void startRace(List<Player> players) {
         tag.racers.clear();
         Vec3i center = tag.checkpoints.get(0).area.getCenter();
         Collections.sort(tag.startVectors, (a, b) -> Integer.compare(simpleDistance(center, a),
                                                                      simpleDistance(center, b)));
         int startVectorIndex = 0;
-        List<Player> players = getEligiblePlayers();
         Collections.shuffle(players);
         for (Player player : players) {
             Racer racer = new Racer(player);
@@ -769,13 +783,13 @@ public final class Race {
             player.setHealth(player.getAttribute(GENERIC_MAX_HEALTH).getValue());
             player.setFoodLevel(20);
             player.setSaturation(20f);
+            player.getInventory().setItem(0, GoodyItem.RETURN.createItemStack());
             if (tag.type == RaceType.STRIDER) {
                 player.getInventory().addItem(new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK));
             }
             if (tag.type == RaceType.PIG) {
                 player.getInventory().addItem(new ItemStack(Material.CARROT_ON_A_STICK));
             }
-            player.getInventory().setItem(0, GoodyItem.RETURN.createItemStack());
             if (tag.type == RaceType.HORSE) {
                 player.getInventory().setHelmet(Mytems.COWBOY_HAT.createItemStack());
             } else if (tag.type == RaceType.CAMEL) {
@@ -836,8 +850,14 @@ public final class Race {
             }
         }
         tag.racers.clear();
-        tag.phase = Phase.IDLE;
         clearEntities();
+    }
+
+    public void removeAllPlayers() {
+        for (Player player : world.getPlayers()) {
+            player.eject();
+            player.teleport(plugin.getLobbyWorld().getSpawnLocation());
+        }
     }
 
     private void resetSpeed(Player player) {
@@ -1125,8 +1145,6 @@ public final class Race {
     }
 
     protected void loadAllRaceChunks() {
-        World world = getWorld();
-        if (world == null) return;
         final int radius = 8;
         HashSet<Vec2i> chunksToLoad = new HashSet<>();
         for (Checkpoint checkpoint : tag.checkpoints) {
@@ -1151,8 +1169,6 @@ public final class Race {
     }
 
     protected void unloadAllRaceChunks() {
-        World world = getWorld();
-        if (world == null) return;
         world.removePluginChunkTickets(plugin);
     }
 

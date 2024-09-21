@@ -2,6 +2,7 @@ package com.cavetale.race;
 
 import com.cavetale.area.struct.Area;
 import com.cavetale.area.struct.AreasFile;
+import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.SQLTrophy;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -24,18 +26,17 @@ import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.format.TextColor.color;
 
+@Getter
 public final class RacePlugin extends JavaPlugin {
     protected static RacePlugin instance;
     protected final RaceEditCommand raceEditCommand = new RaceEditCommand(this);
+    protected final RaceAdminCommand raceAdminCommand = new RaceAdminCommand(this);
     protected final Races races = new Races(this);
     protected final EventListener eventListener = new EventListener(this);
-    protected int ticks;
     protected Save save;
     protected File saveFile;
-
-    public File getSaveFolder() {
-        return new File(getDataFolder(), "races");
-    }
+    private CreativeServerListener creativeServerListener;
+    private RaceServerListener raceServerListener;
 
     @Override
     public void onLoad() {
@@ -45,30 +46,32 @@ public final class RacePlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveFile = new File(getDataFolder(), "save.json");
-        getSaveFolder().mkdirs();
         raceEditCommand.enable();
         eventListener.enable();
-        races.load();
-        races.onEnable();
         load();
-        getServer().getScheduler().runTaskTimer(this, this::onTick, 1, 1);
+        getServer().getScheduler().runTaskTimer(this, races::tick, 1, 1);
+        switch (NetworkServer.current()) {
+        case CREATIVE:
+            creativeServerListener = new CreativeServerListener();
+            creativeServerListener.enable();
+            break;
+        case RACE:
+            raceServerListener = new RaceServerListener();
+            raceServerListener.enable();
+            raceAdminCommand.enable();
+            break;
+        default: break;
+        }
     }
 
     @Override
     public void onDisable() {
-        races.onDisable();
-        races.save();
+        races.saveAll();
+        races.unloadAll();
         save();
-    }
-
-    void onTick() {
-        races.tick(ticks);
-        ticks += 1;
-    }
-
-    boolean consoleCommand(String cmd) {
-        getLogger().info("Console command: " + cmd);
-        return getServer().dispatchCommand(getServer().getConsoleSender(), cmd);
+        if (creativeServerListener != null) {
+            creativeServerListener.disable();
+        }
     }
 
     protected void load() {
@@ -82,10 +85,8 @@ public final class RacePlugin extends JavaPlugin {
     }
 
     protected void scoreRanking(boolean giveRewards) {
-        World world = Bukkit.getWorlds().get(0);
-        AreasFile areasFile;
-        areasFile = Json.load(new File(new File(Bukkit.getWorlds().get(0).getWorldFolder(), "areas"), "Race.json"),
-                              AreasFile.class, () -> null);
+        final World world = getLobbyWorld();
+        AreasFile areasFile = AreasFile.load(world, "Race");
         if (areasFile == null) return;
         Location spawnLocation = world.getSpawnLocation();
         List<UUID> uuids = save.rankScores();
@@ -138,7 +139,7 @@ public final class RacePlugin extends JavaPlugin {
             int placement = 0;
             int lastScore = -1;
             for (UUID uuid : uuids) {
-                final int score = save.scores.getOrDefault(uuid, 0);
+                final int score = save.getScores().getOrDefault(uuid, 0);
                 if (score == 0) break;
                 if (lastScore != score) {
                     lastScore = score;
@@ -153,5 +154,21 @@ public final class RacePlugin extends JavaPlugin {
             }
             Trophies.insertTrophies(trophies);
         }
+    }
+
+    public static RacePlugin racePlugin() {
+        return instance;
+    }
+
+    public static boolean isCreativeServer() {
+        return instance.creativeServerListener != null;
+    }
+
+    public static boolean isRaceServer() {
+        return instance.raceServerListener != null;
+    }
+
+    public World getLobbyWorld() {
+        return Bukkit.getWorlds().get(0);
     }
 }

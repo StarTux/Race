@@ -8,15 +8,17 @@ import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.editor.EditMenuDelegate;
 import com.cavetale.core.editor.EditMenuNode;
 import com.cavetale.core.editor.Editor;
-import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec3i;
+import com.cavetale.core.util.Json;
+import com.winthier.creative.BuildWorld;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.text;
@@ -32,14 +34,15 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
 
     @Override
     protected void onEnable() {
+        rootNode.description("Race Edit Command");
         rootNode.addChild("list")
             .caller(this::list)
             .description("List all races");
         rootNode.addChild("info")
             .playerCaller(this::info)
             .description("Info about current race course");
-        rootNode.addChild("create").arguments("<name>")
-            .description("Create a new race")
+        rootNode.addChild("create")
+            .description("Create a new race here")
             .playerCaller(this::create);
         rootNode.addChild("setspawn")
             .caller(this::setspawn)
@@ -110,12 +113,6 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         rootNode.addChild("coins")
             .completableList(Arrays.asList("clear", "add", "remove"))
             .caller(this::coins);
-        rootNode.addChild("event").denyTabCompletion()
-            .description("Toggle event mode")
-            .playerCaller(this::event);
-        rootNode.addChild("eventrace").denyTabCompletion()
-            .description("Make current race the event race")
-            .playerCaller(this::eventRace);
         rootNode.addChild("setarea").denyTabCompletion()
             .description("Set race area")
             .playerCaller(this::setArea);
@@ -128,29 +125,12 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             .playerCaller(this::playerReset);
         rootNode.addChild("teleport").arguments("<race>")
             .alias("tp")
-            .completers(CommandArgCompleter.supplyList(() -> plugin.races.names()))
+            .completers(CommandArgCompleter.supplyList(() -> plugin.races.getWorldNames()))
             .playerCaller(this::teleport);
         rootNode.addChild("give").arguments("<player> <goody>")
             .completers(CommandArgCompleter.NULL,
                         CommandArgCompleter.enumLowerList(GoodyItem.class))
             .senderCaller(this::give);
-        // score
-        CommandNode scoreNode = rootNode.addChild("score")
-            .description("Grand Prix Scores");
-        scoreNode.addChild("reset").denyTabCompletion()
-            .description("Reset all scores")
-            .senderCaller(this::scoreReset);
-        scoreNode.addChild("pedestal").denyTabCompletion()
-            .description("Put winners on pedestals")
-            .senderCaller(this::scorePedestal);
-        scoreNode.addChild("reward").denyTabCompletion()
-            .description("Give winners rewards")
-            .senderCaller(this::scoreReward);
-        scoreNode.addChild("add").arguments("<player> <amount>")
-            .completers(PlayerCache.NAME_COMPLETER,
-                        CommandArgCompleter.integer(i -> true))
-            .description("Modify player score")
-            .senderCaller(this::scoreAdd);
     }
 
     private Race requireRace(Player player) {
@@ -183,7 +163,6 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         if (args.length != 0) return false;
         Race race = requireRace(player);
         if (race == null) throw new CommandWarn("There is no race here!");
-        player.sendMessage(textOfChildren(text("worldName ", GRAY), text(race.tag.worldName, WHITE)));
         player.sendMessage(textOfChildren(text("type ", GRAY), text(race.tag.type.name(), WHITE)));
         player.sendMessage(textOfChildren(text("area ", GRAY), text(race.tag.area.toString(), WHITE)));
         player.sendMessage(textOfChildren(text("spawnArea ", GRAY), text(race.tag.spawnArea.toString(), WHITE)));
@@ -197,21 +176,21 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         return true;
     }
 
-    private boolean create(Player player, String[] args) {
-        if (args.length != 1) return false;
-        String name = args[0];
-        Race race = plugin.races.named(name);
-        Cuboid cuboid = Cuboid.requireSelectionOf(player);
-        if (race == null) {
-            race = new Race(plugin, name, new Tag());
-            plugin.races.add(race);
+    private void create(Player player) {
+        final Cuboid cuboid = Cuboid.requireSelectionOf(player);
+        final World world = player.getWorld();
+        final BuildWorld buildWorld = BuildWorld.in(world);
+        if (buildWorld == null) {
+            throw new CommandWarn("Not a build world: " + world.getName());
         }
-        race.setWorld(player.getWorld());
+        Race race = plugin.races.inWorld(world);
+        if (race == null) {
+            race = plugin.races.create(world, buildWorld);
+        }
         race.setArea(cuboid);
         race.setSpawnLocation(player.getLocation());
         race.save();
         player.sendMessage(text("Race created: " + race.listString(), YELLOW));
-        return true;
     }
 
     private boolean setspawn(CommandContext context, CommandNode node, String[] args) {
@@ -222,7 +201,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         race.setSpawnLocation(player.getLocation());
         race.setSpawnArea(cuboid);
         race.save();
-        context.message(text(race.name + ": Spawn set to your WorldEdit selection and current location", YELLOW));
+        context.message(text(race.getWorldName() + ": Spawn set to your WorldEdit selection and current location", YELLOW));
         return true;
     }
 
@@ -232,10 +211,10 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Race race = requireRace(player);
         if (race.tag.phase == Phase.EDIT) {
             race.setPhase(Phase.IDLE);
-            context.message(text(race.name + ": Edit mode disabled", YELLOW));
+            context.message(text(race.getWorldName() + ": Edit mode disabled", YELLOW));
         } else {
             race.setPhase(Phase.EDIT);
-            context.message(text(race.name + ": Edit mode enabled", YELLOW));
+            context.message(text(race.getWorldName() + ": Edit mode enabled", YELLOW));
         }
         return true;
     }
@@ -249,7 +228,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             if (laps <= 0) throw new CommandWarn("Not positive: " + laps);
             race.setLaps(laps);
             race.save();
-            context.message(text(race.name + ": Laps updated: " + laps, YELLOW));
+            context.message(text(race.getWorldName() + ": Laps updated: " + laps, YELLOW));
         }
         race.startRace();
         final List<String> names = new ArrayList<>();
@@ -278,7 +257,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
     private void checkpointList(Player player) {
         Race race = requireRace(player);
         List<Checkpoint> checkpoints = race.getCheckpoints();
-        player.sendMessage(text(race.name + ": " + checkpoints.size() + " checkpoint(s)", YELLOW));
+        player.sendMessage(text(race.getWorldName() + ": " + checkpoints.size() + " checkpoint(s)", YELLOW));
         for (int i = 0; i < checkpoints.size(); i += 1) {
             final Checkpoint checkpoint = checkpoints.get(i);
             final String cmd = "/raceedit cp tp " + i;
@@ -304,7 +283,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         race.setCheckpoints(checkpoints);
         race.save();
         final String cmd = "/raceedit cp tp " + index;
-        player.sendMessage(text(race.name + ": Checkpoint added: " + cuboid, YELLOW)
+        player.sendMessage(text(race.getWorldName() + ": Checkpoint added: " + cuboid, YELLOW)
                            .insertion(cmd)
                            .hoverEvent(showText(text(cmd, GRAY)))
                            .clickEvent(suggestCommand(cmd)));
@@ -322,7 +301,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Checkpoint old = checkpoints.remove(index);
         race.setCheckpoints(checkpoints);
         race.save();
-        player.sendMessage(text(race.name + ": Checkpoint #" + index + " removed: " + old, YELLOW));
+        player.sendMessage(text(race.getWorldName() + ": Checkpoint #" + index + " removed: " + old, YELLOW));
         return true;
     }
 
@@ -332,7 +311,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         final int index = CommandArgCompleter.requireInt(args[0], i -> i >= 0 && i < race.getCheckpoints().size());
         final Checkpoint checkpoint = race.getCheckpoints().get(index);
         final String cmd = "/raceedit cp tp " + index;
-        player.sendMessage(textOfChildren(text(race.name + ":", YELLOW),
+        player.sendMessage(textOfChildren(text(race.getWorldName() + ":", YELLOW),
                                           text(" checkpoint #" + index, GRAY),
                                           text(" " + checkpoint, WHITE))
                            .insertion(cmd)
@@ -359,7 +338,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         checkpoints.set(indexB, a);
         race.setCheckpoints(checkpoints);
         race.save();
-        player.sendMessage(text(race.name + ": Checkpoints swapped: " + indexA + ", " + indexB, YELLOW));
+        player.sendMessage(text(race.getWorldName() + ": Checkpoints swapped: " + indexA + ", " + indexB, YELLOW));
         return true;
     }
 
@@ -372,7 +351,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             Checkpoint cp = checkpoints.get(i);
             if (!cp.getArea().contains(location)) continue;
             final String cmd = "/raceedit cp tp " + i;
-            player.sendMessage(textOfChildren(text(race.name + ":", YELLOW),
+            player.sendMessage(textOfChildren(text(race.getWorldName() + ":", YELLOW),
                                               text("Checkpoint here: ", GRAY),
                                               text("#" + i, YELLOW))
                                .insertion(cmd)
@@ -428,7 +407,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
             throw new CommandWarn("Invalid type: " + args[0]);
         }
         race.save();
-        context.message(text(race.name + ": Type updated: " + race.tag.type, YELLOW));
+        context.message(text(race.getWorldName() + ": Type updated: " + race.tag.type, YELLOW));
         return true;
     }
 
@@ -438,7 +417,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Race race = requireRace(player);
         race.tag.laps = requireInt(args[0]);
         race.save();
-        context.message(text(race.name + ": Laps updated: " + race.tag.laps, YELLOW));
+        context.message(text(race.getWorldName() + ": Laps updated: " + race.tag.laps, YELLOW));
         return true;
     }
 
@@ -464,7 +443,7 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         Player player = context.requirePlayer();
         Race race = requireRace(player);
         race.stopRace();
-        context.message(text("Race stopped: " + race.name, YELLOW));
+        context.message(text("Race stopped: " + race.getWorldName(), YELLOW));
         race.save();
         return true;
     }
@@ -608,44 +587,6 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         }
     }
 
-    private boolean event(Player player, String[] args) {
-        if (args.length > 1) return false;
-        if (args.length == 1) {
-            try {
-                plugin.save.event = Boolean.parseBoolean(args[0]);
-            } catch (IllegalArgumentException iae) {
-                player.sendMessage(Component.text("Invalid boolean: " + args[0], RED));
-                return true;
-            }
-            plugin.save();
-        }
-        player.sendMessage(Component.text("Event mode is ")
-                           .append(plugin.save.event
-                                   ? Component.text("Enabled", GREEN)
-                                   : Component.text("Disabled", GREEN)));
-        return true;
-    }
-
-    private boolean eventRace(Player player, String[] args) {
-        if (args.length == 1 && args[0].equals("reset")) {
-            plugin.save.eventRace = null;
-            plugin.save();
-            player.sendMessage(Component.text("Event race reset", YELLOW));
-            return true;
-        }
-        if (args.length != 0) return false;
-        Race race = requireRace(player);
-        plugin.save.eventRace = race.name;
-        plugin.save();
-        player.sendMessage(Component.text("Event race set to " + plugin.save.eventRace,
-                                          YELLOW));
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (player == online) continue;
-            online.teleport(race.getSpawnLocation());
-        }
-        return true;
-    }
-
     private boolean setArea(Player player, String[] args) {
         Race race = requireRace(player);
         Cuboid cuboid = Cuboid.requireSelectionOf(player);
@@ -675,39 +616,6 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
         return true;
     }
 
-    private boolean scoreReset(CommandSender sender, String[] args) {
-        plugin.save.scores.clear();
-        plugin.save();
-        sender.sendMessage(Component.text("All scores were reset!", YELLOW));
-        return true;
-    }
-
-    private boolean scorePedestal(CommandSender sender, String[] args) {
-        plugin.save.eventRace = null;
-        plugin.save();
-        sender.sendMessage(Component.text("Putting winners on pedestals...", YELLOW));
-        plugin.scoreRanking(false);
-        return true;
-    }
-
-    private boolean scoreReward(CommandSender sender, String[] args) {
-        plugin.save.eventRace = null;
-        plugin.save();
-        sender.sendMessage(Component.text("Giving winners rewards...", YELLOW));
-        plugin.scoreRanking(true);
-        return true;
-    }
-
-    private boolean scoreAdd(CommandSender sender, String[] args) {
-        if (args.length != 2) return false;
-        PlayerCache target = PlayerCache.require(args[0]);
-        int amount = requireInt(args[1]);
-        plugin.save.scores.compute(target.uuid, (u, i) -> i != null ? i + amount : amount);
-        plugin.save();
-        sender.sendMessage("Score of " + target.name + " changed to " + plugin.save.scores.get(target.uuid));
-        return true;
-    }
-
     private boolean playerReset(CommandSender sender, String[] args) {
         for (Player player : Bukkit.getOnlinePlayers()) {
             player.setWalkSpeed(0.2f);
@@ -718,12 +626,12 @@ public final class RaceEditCommand extends AbstractCommand<RacePlugin> {
 
     protected boolean teleport(Player player, String[] args) {
         if (args.length != 1) return false;
-        Race race = plugin.races.named(args[0]);
+        Race race = plugin.races.inWorld(args[0]);
         if (race == null) {
             throw new CommandWarn("Race not found: " + args[0]);
         }
         player.teleport(race.getSpawnLocation());
-        player.sendMessage(Component.text("Teleported to race " + race.name));
+        player.sendMessage(Component.text("Teleported to race " + race.getWorldName()));
         return true;
     }
 

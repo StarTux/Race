@@ -171,7 +171,7 @@ public final class EventListener implements Listener {
         Race race = plugin.races.at(player.getLocation());
         List<Component> lines = new ArrayList<>();
         if (race == null || !race.isRacing()) {
-            if (plugin.save.event) {
+            if (plugin.getSave().isEvent()) {
                 eventSidebar(player, event, lines);
             }
         } else {
@@ -184,9 +184,9 @@ public final class EventListener implements Listener {
     }
 
     private void eventSidebar(Player player, PlayerHudEvent event, List<Component> lines) {
-        List<UUID> uuids = plugin.save.rankScores();
+        List<UUID> uuids = plugin.getSave().rankScores();
         lines.add(join(noSeparators(), Mytems.GOLDEN_CUP.component, text("Grand Prix", GOLD), Mytems.GOLDEN_CUP.component));
-        int playerScore = plugin.save.scores.getOrDefault(player.getUniqueId(), 0);
+        int playerScore = plugin.getSave().getScores().getOrDefault(player.getUniqueId(), 0);
         lines.add(text("Your Score ", WHITE)
                   .append(text(playerScore, BLUE)));
         int placement = 0;
@@ -197,7 +197,7 @@ public final class EventListener implements Listener {
             final Component name;
             if (i < uuids.size()) {
                 UUID uuid = uuids.get(i);
-                score = plugin.save.scores.get(uuid);
+                score = plugin.getSave().getScores().get(uuid);
                 Player thePlayer = Bukkit.getPlayer(uuid);
                 name = thePlayer != null
                     ? thePlayer.displayName()
@@ -473,12 +473,12 @@ public final class EventListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     void onPlayerSpawnLocation(PlayerSpawnLocationEvent event) {
-        if (plugin.save.event) {
-            if (plugin.save.eventRace == null) {
-                event.setSpawnLocation(Bukkit.getWorlds().get(0).getSpawnLocation());
+        if (plugin.getSave().isEvent()) {
+            if (plugin.getSave().getEventRaceWorld() == null) {
+                event.setSpawnLocation(plugin.getLobbyWorld().getSpawnLocation());
                 return;
             }
-            Race race = plugin.races.named(plugin.save.eventRace);
+            final Race race = plugin.races.inWorld(plugin.getSave().getEventRaceWorld());
             if (race != null && race.getWorld() != null) {
                 event.setSpawnLocation(race.getSpawnLocation());
             }

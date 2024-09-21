@@ -1,10 +1,14 @@
 package com.cavetale.race;
 
+import com.cavetale.core.util.Json;
+import com.winthier.creative.BuildWorld;
 import java.io.File;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 
 /**
@@ -12,72 +16,97 @@ import org.bukkit.block.Block;
  */
 @RequiredArgsConstructor
 public final class Races {
+    public static final String RACE_JSON = "race.json";
     private final RacePlugin plugin;
-    private final List<Race> races = new ArrayList<>();
+    private final Map<String, Race> worldRaceMap = new HashMap<>();
+    private int ticks;
 
-    public void load() {
-        races.clear();
-        for (File file : plugin.getSaveFolder().listFiles()) {
-            String fileName = file.getName();
-            if (!fileName.endsWith(".json")) continue;
-            Tag tag = Json.load(file, Tag.class);
-            String name = fileName.substring(0, fileName.length() - 5);
-            if (tag == null) {
-                plugin.getLogger().warning("Failed to load race: " + file);
-                continue;
-            }
-            Race race = new Race(plugin, name, tag);
-            if (tag.fix()) {
-                plugin.getLogger().info("Race fixed: " + name);
-                race.save();
-            }
-            races.add(race);
+    public Race loadWorld(World world, BuildWorld buildWorld) {
+        final File file = new File(world.getWorldFolder(), RACE_JSON);
+        if (!file.exists()) return null;
+        Tag tag = Json.load(file, Tag.class);
+        if (tag == null) {
+            plugin.getLogger().warning("Failed to load race: " + file);
+            return null;
         }
+        final Race race = new Race(plugin, buildWorld, world.getName(), world, file, tag);
+        if (tag.fix()) {
+            plugin.getLogger().info("Race fixed: " + buildWorld.getName());
+            race.save();
+        }
+        race.onEnable();
+        worldRaceMap.put(race.getWorldName(), race);
+        return race;
     }
 
-    public void onEnable() {
-        for (Race race : races) {
-            race.onEnable();
-        }
+    public Race unloadWorld(World world) {
+        final Race race = worldRaceMap.remove(world.getName());
+        if (race == null) return null;
+        race.save();
+        race.onDisable();
+        return race;
     }
 
-    public void onDisable() {
-        for (Race race : races) {
+    public Race create(World world, BuildWorld buildWorld) {
+        final File file = new File(world.getWorldFolder(), RACE_JSON);
+        final Race race = new Race(plugin, buildWorld, world.getName(), world, file, new Tag());
+        race.onEnable();
+        worldRaceMap.put(race.getWorldName(), race);
+        return race;
+    }
+
+    public Race start(World world, BuildWorld buildWorld) {
+        final Race race = loadWorld(world, buildWorld);
+        race.getTag().setPhase(Phase.IDLE);
+        race.startRace(plugin.getLobbyWorld().getPlayers());
+        if (plugin.getSave().isEvent()) {
+            plugin.getSave().setEventRaceWorld(race.getWorldName());
+        }
+        return race;
+    }
+
+    public void unloadAll() {
+        for (Race race : all()) {
             race.onDisable();
         }
+        worldRaceMap.clear();
     }
 
-    public void save() {
-        for (Race race : races) {
+    public void saveAll() {
+        for (Race race : all()) {
             race.save();
         }
     }
 
     public Race at(Location loc) {
-        for (Race race : races) {
-            if (!race.isIn(loc.getWorld())) continue;
-            if (Race.containsHorizontal(race.tag.area, loc)) return race;
+        final Race race = inWorld(loc.getWorld());
+        if (race == null || !Race.containsHorizontal(race.tag.area, loc)) {
+            return null;
         }
-        return null;
+        return race;
     }
 
     public Race at(Block block) {
-        for (Race race : races) {
-            if (!race.isIn(block.getWorld())) continue;
-            if (Race.containsHorizontal(race.tag.area, block)) return race;
+        final Race race = inWorld(block.getWorld());
+        if (race == null || !Race.containsHorizontal(race.tag.area, block)) {
+            return null;
         }
-        return null;
+        return race;
     }
 
-    public Race named(String name) {
-        for (Race race : races) {
-            if (race.name.equals(name)) return race;
-        }
-        return null;
+    public Race inWorld(String worldName) {
+        return worldRaceMap.get(worldName);
     }
 
-    public void tick(int ticks) {
-        for (Race race : races) race.tick(ticks);
+    public Race inWorld(World world) {
+        return worldRaceMap.get(world.getName());
+    }
+
+    public void tick() {
+        for (Race race : all()) {
+            race.tick(ticks);
+        }
+        ticks += 1;
     }
 
     public boolean isRace(Location loc) {
@@ -89,18 +118,10 @@ public final class Races {
     }
 
     public List<Race> all() {
-        return new ArrayList<>(races);
+        return List.copyOf(worldRaceMap.values());
     }
 
-    public List<String> names() {
-        List<String> result = new ArrayList<>(races.size());
-        for (Race race : races) {
-            result.add(race.name);
-        }
-        return result;
-    }
-
-    public void add(Race race) {
-        races.add(race);
+    public List<String> getWorldNames() {
+        return List.copyOf(worldRaceMap.keySet());
     }
 }

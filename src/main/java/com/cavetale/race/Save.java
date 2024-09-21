@@ -6,11 +6,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import lombok.Data;
 
+@Data
 public final class Save {
-    protected boolean event;
-    protected String eventRace;
-    protected Map<UUID, Integer> scores = new HashMap<>();
+    private boolean event;
+    private String eventRaceWorld;
+    private Map<UUID, Integer> scores = new HashMap<>();
 
     public List<UUID> rankScores() {
         List<UUID> uuids = new ArrayList<>();

@@ -25,8 +25,6 @@ import static net.kyori.adventure.text.format.NamedTextColor.*;
 @Getter @Setter
 public final class Tag implements EditMenuAdapter {
     // Actual settings
-    @EditMenuItem(settable = false)
-    protected String worldName = "";
     protected RaceType type = RaceType.WALK;
     @EditMenuItem(description = "Must contain the whole race track")
     protected Cuboid area = Cuboid.ZERO;

@@ -8,7 +8,13 @@ website: https://cavetale.com
 version: 0.1
 api-version: '1.21'
 
-depend: [Core, Mytems, WorldMarker, Fam, Area]
+depend:
+- Core
+- Mytems
+- WorldMarker
+- Fam
+- Area
+- Creative
 softdepend: []
 
 commands:
@@ -18,11 +24,17 @@ commands:
     permission: race.race
     usage: /race
 
-  raceedit:
-    aliases: [raceadmin]
+  raceadmin:
+    aliases: raceadm
     description: Race Admin Command
     permission: race.admin
-    usage: /race
+    usage: /raceadm
+
+  raceedit:
+    aliases: []
+    description: Race Edit Command
+    permission: race.admin
+    usage: /raceedit
 
 permissions:
 
