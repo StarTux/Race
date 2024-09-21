@@ -57,6 +57,7 @@ public final class Races {
 
     public Race start(World world, BuildWorld buildWorld) {
         final Race race = loadWorld(world, buildWorld);
+        race.loadAllRaceChunks();
         race.getTag().setPhase(Phase.IDLE);
         race.startRace(plugin.getLobbyWorld().getPlayers());
         if (plugin.getSave().isEvent()) {
