@@ -1,11 +1,16 @@
 package com.cavetale.race;
 
+import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.util.Json;
 import com.winthier.creative.BuildWorld;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -47,12 +52,26 @@ public final class Races {
         return race;
     }
 
+    public void create(BuildWorld buildWorld, Consumer<Race> callback) {
+        buildWorld.makeLocalCopyAsync(world -> {
+                final Race race = create(world, buildWorld);
+                callback.accept(race);
+            });
+    }
+
     public Race create(World world, BuildWorld buildWorld) {
         final File file = new File(world.getWorldFolder(), RACE_JSON);
         final Race race = new Race(plugin, buildWorld, world.getName(), world, file, new Tag());
         race.onEnable();
         worldRaceMap.put(race.getWorldName(), race);
         return race;
+    }
+
+    public void start(BuildWorld buildWorld, Consumer<Race> callback) {
+        buildWorld.makeLocalCopyAsync(world -> {
+                final Race race = start(world, buildWorld);
+                callback.accept(race);
+            });
     }
 
     public Race start(World world, BuildWorld buildWorld) {
@@ -124,5 +143,29 @@ public final class Races {
 
     public List<String> getWorldNames() {
         return List.copyOf(worldRaceMap.keySet());
+    }
+
+    public static Map<BuildWorld, Tag> getAllRaceTags(boolean confirmationRequired) {
+        final Map<BuildWorld, Tag> result = new IdentityHashMap<>();
+        for (BuildWorld buildWorld : BuildWorld.findMinigameWorlds(MinigameMatchType.RACE, confirmationRequired)) {
+            final Tag tag = Json.load(new File(buildWorld.getCreativeWorldFolder(), Races.RACE_JSON), Tag.class);
+            if (tag == null) continue;
+            result.put(buildWorld, tag);
+        }
+        return result;
+    }
+
+    public static Map<RaceType, List<BuildWorld>> sortRaceTypes(Map<BuildWorld, Tag> raceTags) {
+        final Map<RaceType, List<BuildWorld>> result = new EnumMap<>(RaceType.class);
+        for (Map.Entry<BuildWorld, Tag> entry : raceTags.entrySet()) {
+            final BuildWorld buildWorld = entry.getKey();
+            final Tag tag = entry.getValue();
+            result.computeIfAbsent(tag.getType(), t -> new ArrayList<>()).add(buildWorld);
+        }
+        return result;
+    }
+
+    public static Tag getRaceTag(BuildWorld buildWorld) {
+        return Json.load(new File(buildWorld.getCreativeWorldFolder(), Races.RACE_JSON), Tag.class);
     }
 }

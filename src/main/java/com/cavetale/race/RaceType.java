@@ -7,6 +7,7 @@ import com.cavetale.race.util.Rnd;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -23,23 +24,25 @@ import org.bukkit.entity.Vehicle;
 import org.bukkit.entity.ZombieHorse;
 import org.bukkit.inventory.ItemStack;
 
+@Getter
 @RequiredArgsConstructor
 public enum RaceType implements EditMenuAdapter {
-    WALK(() -> new ItemStack(Material.IRON_BOOTS)),
-    STRIDER(() -> new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK)),
-    PARKOUR(() -> new ItemStack(Material.TRIDENT)),
-    ICE_BOAT(() -> new ItemStack(Material.ICE)),
-    BOAT(() -> new ItemStack(Material.OAK_BOAT)),
-    HORSE(() -> new ItemStack(Material.IRON_HORSE_ARMOR)),
-    HALLOWEEN_HORSE(() -> new ItemStack(Material.ZOMBIE_HEAD)),
-    PIG(() -> new ItemStack(Material.CARROT_ON_A_STICK)),
-    ELYTRA(() -> new ItemStack(Material.ELYTRA)),
-    BROOM(Mytems.WITCH_BROOM::createIcon),
-    SONIC(Mytems.SNEAKERS::createIcon),
-    CAMEL(() -> new ItemStack(Material.CAMEL_SPAWN_EGG)),
+    WALK("Walking", () -> new ItemStack(Material.IRON_BOOTS)),
+    STRIDER("Strider", () -> new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK)),
+    PARKOUR("Parkour", () -> new ItemStack(Material.TRIDENT)),
+    ICE_BOAT("Ice Boats", () -> new ItemStack(Material.ICE)),
+    BOAT("Boat Race", () -> new ItemStack(Material.OAK_BOAT)),
+    HORSE("Horses", () -> new ItemStack(Material.IRON_HORSE_ARMOR)),
+    HALLOWEEN_HORSE("Halloween Horses", () -> new ItemStack(Material.ZOMBIE_HEAD)),
+    PIG("Pig Race", () -> new ItemStack(Material.CARROT_ON_A_STICK)),
+    ELYTRA("Elytra", () -> new ItemStack(Material.ELYTRA)),
+    BROOM("Broom Race", Mytems.WITCH_BROOM::createIcon),
+    SONIC("Sonic", Mytems.SNEAKERS::createIcon),
+    CAMEL("Camel Race", () -> new ItemStack(Material.CAMEL_SPAWN_EGG)),
     ;
 
-    public final Supplier<ItemStack> iconSupplier;
+    private final String displayName;
+    private final Supplier<ItemStack> iconSupplier;
 
     public boolean isMounted() {
         switch (this) {
@@ -75,6 +78,7 @@ public enum RaceType implements EditMenuAdapter {
                     e.setShivering(false);
                     e.setAdult();
                     e.setAgeLock(true);
+                    e.setSaddle(true);
                 });
         case BOAT:
         case ICE_BOAT: {
@@ -183,6 +187,10 @@ public enum RaceType implements EditMenuAdapter {
 
     @Override
     public ItemStack getMenuIcon(EditMenuNode node) {
+        return iconSupplier.get();
+    }
+
+    public ItemStack createIcon() {
         return iconSupplier.get();
     }
 }

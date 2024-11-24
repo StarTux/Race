@@ -29,6 +29,7 @@ import static net.kyori.adventure.text.format.TextColor.color;
 @Getter
 public final class RacePlugin extends JavaPlugin {
     protected static RacePlugin instance;
+    protected final RaceCommand raceCommand = new RaceCommand(this);
     protected final RaceEditCommand raceEditCommand = new RaceEditCommand(this);
     protected final RaceAdminCommand raceAdminCommand = new RaceAdminCommand(this);
     protected final Races races = new Races(this);
@@ -46,6 +47,7 @@ public final class RacePlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveFile = new File(getDataFolder(), "save.json");
+        raceCommand.enable();
         raceEditCommand.enable();
         eventListener.enable();
         load();

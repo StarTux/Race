@@ -18,7 +18,7 @@ depend:
 softdepend: []
 
 commands:
-  racer:
+  race:
     aliases: []
     description: Race Command
     permission: race.race

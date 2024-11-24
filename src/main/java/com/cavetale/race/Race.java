@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -105,6 +106,7 @@ public final class Race {
     protected Map<Vec3i, Bogey> skeletons = new HashMap<>();
     public static final int MAX_COINS = 100;
     protected Mytems coinItem;
+    @Setter private boolean timeTrial;
 
     public void onEnable() {
         this.coinItem = tag.type.getCoinItem();
@@ -500,6 +502,17 @@ public final class Race {
                     .remindAllOnce();
             }
         }
+        if (tag.countRacers() == 0) {
+                for (Player player : getPresentPlayers()) {
+                    player.sendMessage(empty());
+                    player.sendMessage(text("The race is finished", GREEN));
+                    player.sendMessage(empty());
+                }
+                stopRace();
+                setPhase(Phase.FINISH);
+                MapReview.start(world, buildWorld)
+                    .remindAllOnce();
+        }
         for (Player player : world.getPlayers()) {
             if (getRacer(player) != null) continue;
             if (!tag.area.contains(player.getLocation())) continue;
@@ -661,7 +674,7 @@ public final class Race {
     }
 
     protected void tickFinish(int ticks) {
-        if (tag.phaseTicks < 20 * 60) return;
+        if (tag.phaseTicks < 20 * 60 && !world.getPlayers().isEmpty()) return;
         MapReview.stop(world);
         setPhase(Phase.IDLE);
         if (plugin.isRaceServer()) {
@@ -958,31 +971,33 @@ public final class Race {
     }
 
     protected void updateEntities() {
-        for (Vec3i vector : tag.goodies) {
-            Goody goody = goodies.computeIfAbsent(vector, v -> new Goody(v));
-            if (goody.cooldown > 0) {
-                goody.cooldown -= 1;
-                continue;
-            }
-            if (goody.entity == null || goody.entity.isDead()) {
-                goody.entity = null;
-                Location location = goody.where.toCenterLocation(getWorld());
-                if (!location.isChunkLoaded()) continue;
-                goody.entity = location.getWorld().spawn(location, ItemDisplay.class, e -> {
-                        e.setPersistent(false);
-                        Entities.setTransient(e);
-                        e.setBrightness(new ItemDisplay.Brightness(15, 15));
-                        e.setShadowRadius(1.0f);
-                        e.setShadowStrength(0.5f);
-                        e.setBrightness(new ItemDisplay.Brightness(15, 15));
-                        e.setItemStack(Mytems.BOSS_CHEST.createIcon());
-                    });
-            } else if (goody.entity instanceof ItemDisplay itemDisplay) {
-                itemDisplay.setTransformation(new Transformation(new Vector3f(0f, 0f, 0f),
-                                                                 new AxisAngle4f(goody.rotation, 0f, 1f, 0f),
-                                                                 new Vector3f(1f, 1f, 1f),
-                                                                 new AxisAngle4f(0f, 0f, 0f, 0f)));
-                goody.rotation += 0.1f;
+        if (!timeTrial || tag.phase == Phase.EDIT) {
+            for (Vec3i vector : tag.goodies) {
+                Goody goody = goodies.computeIfAbsent(vector, v -> new Goody(v));
+                if (goody.cooldown > 0) {
+                    goody.cooldown -= 1;
+                    continue;
+                }
+                if (goody.entity == null || goody.entity.isDead()) {
+                    goody.entity = null;
+                    Location location = goody.where.toCenterLocation(getWorld());
+                    if (!location.isChunkLoaded()) continue;
+                    goody.entity = location.getWorld().spawn(location, ItemDisplay.class, e -> {
+                            e.setPersistent(false);
+                            Entities.setTransient(e);
+                            e.setBrightness(new ItemDisplay.Brightness(15, 15));
+                            e.setShadowRadius(1.0f);
+                            e.setShadowStrength(0.5f);
+                            e.setBrightness(new ItemDisplay.Brightness(15, 15));
+                            e.setItemStack(Mytems.BOSS_CHEST.createIcon());
+                        });
+                } else if (goody.entity instanceof ItemDisplay itemDisplay) {
+                    itemDisplay.setTransformation(new Transformation(new Vector3f(0f, 0f, 0f),
+                                                                     new AxisAngle4f(goody.rotation, 0f, 1f, 0f),
+                                                                     new Vector3f(1f, 1f, 1f),
+                                                                     new AxisAngle4f(0f, 0f, 0f, 0f)));
+                    goody.rotation += 0.1f;
+                }
             }
         }
         for (Vec3i vector : tag.coins) {
