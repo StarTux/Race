@@ -29,12 +29,27 @@ public final class RaceMapMenu {
             .size(6 * 9)
             .layer(GuiOverlay.BLANK, YELLOW)
             .title(text(buildWorld.getName(), BLACK));
-        gui.setItem(6, 4,
+        gui.setItem(6, 2,
                     tooltip(new ItemStack(Material.CLOCK),
-                            List.of(text("Time Trial", BLUE))),
+                            List.of(text("Time Trial", BLUE),
+                                    text("Race against the clock", GRAY),
+                                    text("and try to beat your", GRAY),
+                                    text("own record.", GRAY))),
                     click -> {
                         if (!click.isLeftClick()) return;
                         player.performCommand("race timetrial " + buildWorld.getPath());
+                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1f);
+                    });
+        gui.setItem(2, 2,
+                    tooltip(new ItemStack(Material.LEAD),
+                            List.of(text("Practice", BLUE),
+                                    text("Race this map on your", GRAY),
+                                    text("own, with all goodies", GRAY),
+                                    text("available, just like", GRAY),
+                                    text("during a Grand Prix.", GRAY))),
+                    click -> {
+                        if (!click.isLeftClick()) return;
+                        player.performCommand("race practice " + buildWorld.getPath());
                         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1f);
                     });
         gui.setItem(Gui.OUTSIDE, null, click -> {

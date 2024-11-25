@@ -107,6 +107,7 @@ public final class Race {
     public static final int MAX_COINS = 100;
     protected Mytems coinItem;
     @Setter private boolean timeTrial;
+    @Setter private boolean practice;
 
     public void onEnable() {
         this.coinItem = tag.type.getCoinItem();

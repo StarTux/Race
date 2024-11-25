@@ -80,8 +80,9 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
         if (buildWorld == null || buildWorld.getRow().parseMinigame() != MinigameMatchType.RACE) {
             throw new CommandWarn("Race world not found: " + path);
         }
-        buildWorld.makeLocalCopyAsync(world -> {
-                plugin.getRaces().start(world, buildWorld);
+        plugin.getRaces().start(buildWorld, race -> {
+                plugin.getSave().setEventRaceWorld(race.getWorldName());
+                race.startRace(plugin.getLobbyWorld().getPlayers());
             });
         sender.sendMessage(text("Starting race in " + buildWorld.getName(), YELLOW));
         return true;
@@ -91,7 +92,12 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
         MapVote.start(MinigameMatchType.RACE, v -> {
                 v.setTitle(text("Grand Prix", BLUE));
                 v.setLobbyWorld(plugin.getLobbyWorld());
-                v.setCallback(result -> plugin.getRaces().start(result.getLocalWorldCopy(), result.getBuildWorldWinner()));
+                v.setCallback(result -> {
+                        plugin.getRaces().start(result.getBuildWorldWinner(), race -> {
+                                plugin.getSave().setEventRaceWorld(race.getWorldName());
+                                race.startRace(plugin.getLobbyWorld().getPlayers());
+                            });
+                    });
             });
         sender.sendMessage(text("Map vote started", YELLOW));
     }

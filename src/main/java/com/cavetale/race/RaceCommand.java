@@ -5,8 +5,10 @@ import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.winthier.creative.BuildWorld;
+import com.winthier.creative.vote.MapVote;
 import java.util.List;
 import org.bukkit.entity.Player;
+import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public final class RaceCommand extends AbstractCommand<RacePlugin> {
@@ -31,6 +33,14 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
             .hidden(true)
             .description("Start a time trial")
             .playerCaller(this::timeTrial);
+        rootNode.addChild("practice").arguments("<map>")
+            .hidden(true)
+            .description("Start a practice run")
+            .playerCaller(this::practice);
+        rootNode.addChild("startvote").denyTabCompletion()
+            .hidden(true)
+            .description("Start a map vote")
+            .playerCaller(this::startVote);
     }
 
     /**
@@ -52,11 +62,18 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
         return buildWorld;
     }
 
+    private void requirePlayerFreedom(Player player) {
+        if (plugin.getSave().isEvent()) {
+            throw new CommandWarn("Cannot start a race during events");
+        }
+        if (!plugin.getLobbyWorld().equals(player.getWorld())) {
+            throw new CommandWarn("You're not in the lobby");
+        }
+    }
+
     private boolean view(Player player, String[] args) {
         if (args.length != 1) return false;
-        if (plugin.getRaces().inWorld(player.getWorld()) != null) {
-            throw new CommandWarn("You're already in a race");
-        }
+        requirePlayerFreedom(player);
         final BuildWorld buildWorld = requireRaceMap(args[0]);
         new RaceMapMenu(player, buildWorld).open();
         return true;
@@ -64,16 +81,40 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
 
     private boolean timeTrial(Player player, String[] args) {
         if (args.length != 1) return false;
-        if (plugin.getRaces().inWorld(player.getWorld()) != null) {
-            throw new CommandWarn("You're already in a race");
-        }
+        requirePlayerFreedom(player);
         final BuildWorld buildWorld = requireRaceMap(args[0]);
         plugin.getRaces().start(buildWorld, race -> {
                 race.setTimeTrial(true);
-                race.loadAllRaceChunks();
-                race.getTag().setPhase(Phase.IDLE);
                 race.startRace(List.of(player));
             });
         return true;
+    }
+
+    private boolean practice(Player player, String[] args) {
+        if (args.length != 1) return false;
+        requirePlayerFreedom(player);
+        final BuildWorld buildWorld = requireRaceMap(args[0]);
+        plugin.getRaces().start(buildWorld, race -> {
+                race.setPractice(true);
+                race.startRace(List.of(player));
+            });
+        return true;
+    }
+
+    private void startVote(Player player) {
+        requirePlayerFreedom(player);
+        if (MapVote.isActive(MinigameMatchType.RACE)) {
+            throw new CommandWarn("Map vote already active!");
+        }
+        MapVote.start(MinigameMatchType.RACE, v -> {
+                v.setTitle(text("Race", BLUE));
+                v.setLobbyWorld(plugin.getLobbyWorld());
+                v.setCallback(result -> {
+                        plugin.getRaces().start(result.getBuildWorldWinner(), race -> {
+                                race.startRace(plugin.getLobbyWorld().getPlayers());
+                            });
+                    });
+            });
+        player.sendMessage(text("Map vote started in the lobby", GREEN));
     }
 }

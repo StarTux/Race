@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import com.cavetale.core.font.GuiOverlay;
+import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.util.Gui;
 import com.winthier.creative.BuildWorld;
 import java.util.ArrayList;
@@ -59,6 +60,21 @@ public final class RaceTypeMenu {
             icon.setAmount(Math.max(1, Math.min(99, worldList.size())));
             gui.setItem(guix, guiy, icon, click -> this.onClickRaceType(raceType, click));
         }
+        gui.setItem(4, 5,
+                    tooltip(Mytems.VOTE_FIREWORK.createItemStack(),
+                            List.of(text("Start Map Vote", BLUE),
+                                    text("Everybody in the Race", GRAY),
+                                    text("lobby can choose one", GRAY),
+                                    text("map.", GRAY),
+                                    text(""),
+                                    text("The race map is chosen", GRAY),
+                                    text("based on all votes after", GRAY),
+                                    text("one minute.", GRAY))),
+                    click -> {
+                        if (!click.isLeftClick()) return;
+                        player.performCommand("race startvote");
+                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
+                    });
         gui.open(player);
     }
 
