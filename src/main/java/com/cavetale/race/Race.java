@@ -45,6 +45,7 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.attribute.Attributable;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
@@ -59,8 +60,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Skeleton;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
@@ -89,7 +90,6 @@ import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static net.kyori.adventure.text.format.TextDecoration.*;
 import static net.kyori.adventure.title.Title.Times.times;
 import static net.kyori.adventure.title.Title.title;
-import static org.bukkit.attribute.Attribute.*;
 
 @Getter
 @RequiredArgsConstructor
@@ -337,7 +337,7 @@ public final class Race {
         player.setFoodLevel(20);
         player.setSaturation(20f);
         if (tag.type.playerIsDamageable()) {
-            player.setHealth(Math.min(player.getHealth() + 1.0, player.getAttribute(GENERIC_MAX_HEALTH).getValue()));
+            player.setHealth(Math.min(player.getHealth() + 1.0, player.getAttribute(Attribute.MAX_HEALTH).getValue()));
         }
         racer.coinCooldown = System.currentTimeMillis() + 400L;
     }
@@ -363,7 +363,7 @@ public final class Race {
                 : ((double) racer.coins / (double) MAX_COINS);
             ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setSpeedFactor(1.25 + 0.75 * factor);
         } else if (player.getVehicle() instanceof Attributable attributable) {
-            AttributeInstance inst = attributable.getAttribute(GENERIC_MOVEMENT_SPEED);
+            AttributeInstance inst = attributable.getAttribute(Attribute.MOVEMENT_SPEED);
             if (inst == null) return;
             for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
                 if (SPEED_BONUS_UUID.equals(modifier.getUniqueId())) {
@@ -378,7 +378,7 @@ public final class Race {
                                                        AttributeModifier.Operation.MULTIPLY_SCALAR_1));
             }
         } else if (tag.type.playerHasSpeed()) {
-            AttributeInstance inst = player.getAttribute(GENERIC_MOVEMENT_SPEED);
+            AttributeInstance inst = player.getAttribute(Attribute.MOVEMENT_SPEED);
             for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
                 if (SPEED_BONUS_UUID.equals(modifier.getUniqueId())) {
                     inst.removeModifier(modifier);
@@ -789,7 +789,7 @@ public final class Race {
                                    text("The Race Begins", GREEN),
                                    times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(1))));
             player.setWalkSpeed(0f);
-            player.setHealth(player.getAttribute(GENERIC_MAX_HEALTH).getValue());
+            player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
             player.setFoodLevel(20);
             player.setSaturation(20f);
             player.getInventory().setItem(0, GoodyItem.RETURN.createItemStack());
@@ -872,7 +872,7 @@ public final class Race {
     private void resetSpeed(Player player) {
         player.setWalkSpeed(0.2f);
         player.setFlySpeed(0.1f);
-        AttributeInstance inst = player.getAttribute(GENERIC_MOVEMENT_SPEED);
+        AttributeInstance inst = player.getAttribute(Attribute.MOVEMENT_SPEED);
         for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
             if (SPEED_BONUS_UUID.equals(modifier.getUniqueId())) {
                 inst.removeModifier(modifier);
@@ -1200,10 +1200,10 @@ public final class Race {
         Racer theRacer = getRacer(player);
         if (theRacer != null) {
             if (tag.type.mountIsAlive() && player.getVehicle() instanceof Attributable ride) {
-                double speed = ride.getAttribute(GENERIC_MOVEMENT_SPEED).getValue();
+                double speed = ride.getAttribute(Attribute.MOVEMENT_SPEED).getValue();
                 lines.add(textOfChildren(text(tiny("speed "), GRAY), text((int) Math.round(speed * 100.0), GOLD)));
             } else if (tag.type.playerHasSpeed()) {
-                double speed = player.getAttribute(GENERIC_MOVEMENT_SPEED).getValue();
+                double speed = player.getAttribute(Attribute.MOVEMENT_SPEED).getValue();
                 lines.add(textOfChildren(text(tiny("speed "), GRAY), text((int) Math.round(speed * 100.0), GOLD)));
             }
         }

@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -28,7 +29,6 @@ import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static org.bukkit.Sound.*;
 import static org.bukkit.SoundCategory.*;
-import static org.bukkit.attribute.Attribute.*;
 
 @RequiredArgsConstructor
 public enum GoodyItem {
@@ -65,7 +65,7 @@ public enum GoodyItem {
          (race, player, racer, item) -> {
              if (player.getVehicle() instanceof LivingEntity target) {
                  item.subtract(1);
-                 target.setHealth(target.getAttribute(GENERIC_MAX_HEALTH).getValue());
+                 target.setHealth(target.getAttribute(Attribute.MAX_HEALTH).getValue());
                  target.removePotionEffect(PotionEffectType.POISON);
                  Location loc = player.getLocation();
                  Location locAhead = player.getEyeLocation().add(loc.getDirection().normalize());

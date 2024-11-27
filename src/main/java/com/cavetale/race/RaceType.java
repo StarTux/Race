@@ -14,7 +14,6 @@ import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.AbstractHorse;
-import org.bukkit.entity.Boat;
 import org.bukkit.entity.Camel;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.Pig;
@@ -22,6 +21,7 @@ import org.bukkit.entity.SkeletonHorse;
 import org.bukkit.entity.Strider;
 import org.bukkit.entity.Vehicle;
 import org.bukkit.entity.ZombieHorse;
+import org.bukkit.entity.boat.OakBoat;
 import org.bukkit.inventory.ItemStack;
 
 @Getter
@@ -90,10 +90,9 @@ public enum RaceType implements EditMenuAdapter {
             if (!location.getBlock().getCollisionShape().getBoundingBoxes().isEmpty()) {
                 location = location.add(0.0, 1.0, 0.0);
             }
-            return location.getWorld().spawn(location, Boat.class, e -> {
+            // TODO Boat Types
+            return location.getWorld().spawn(location, OakBoat.class, e -> {
                     e.setPersistent(false);
-                    Boat.Type theType = Rnd.pick(Boat.Type.values());
-                    e.setBoatType(theType);
                 });
         }
         case HORSE: {
@@ -104,9 +103,9 @@ public enum RaceType implements EditMenuAdapter {
                     e.setColor(Rnd.pick(Horse.Color.values()));
                     e.setStyle(Rnd.pick(Horse.Style.values()));
                     double variance = 0.01;
-                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3375);
-                    e.getAttribute(Attribute.GENERIC_JUMP_STRENGTH).setBaseValue(0.7);
-                    e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
+                    e.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.3375);
+                    e.getAttribute(Attribute.JUMP_STRENGTH).setBaseValue(0.7);
+                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
                     e.setHealth(20.0);
                     e.setTamed(true);
                     e.getInventory().setSaddle(new ItemStack(Material.SADDLE));
@@ -119,9 +118,9 @@ public enum RaceType implements EditMenuAdapter {
                 e.setAdult();
                 e.setAgeLock(true);
                 double variance = 0.01;
-                e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3375);
-                e.getAttribute(Attribute.GENERIC_JUMP_STRENGTH).setBaseValue(0.7);
-                e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
+                e.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.3375);
+                e.getAttribute(Attribute.JUMP_STRENGTH).setBaseValue(0.7);
+                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
                 e.setHealth(20.0);
                 e.setTamed(true);
                 e.getInventory().setSaddle(new ItemStack(Material.SADDLE));
@@ -136,9 +135,9 @@ public enum RaceType implements EditMenuAdapter {
                     e.setAdult();
                     e.setAgeLock(true);
                     double variance = 0.01;
-                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.175);
+                    e.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.175);
                     e.setJumpStrength(0.3);
-                    e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20.0);
+                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
                     e.setHealth(20.0);
                     e.setTamed(true);
                     e.getInventory().setSaddle(new ItemStack(Material.SADDLE));
@@ -151,8 +150,8 @@ public enum RaceType implements EditMenuAdapter {
                     e.setAdult();
                     e.setAgeLock(true);
                     e.setSaddle(true);
-                    e.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.30);
-                    e.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(15.0);
+                    e.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.30);
+                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(15.0);
                 });
             return pig;
         }
