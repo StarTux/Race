@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import com.cavetale.core.font.GuiOverlay;
+import com.cavetale.core.menu.MenuItemEvent;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.util.Gui;
 import com.winthier.creative.BuildWorld;
@@ -36,6 +37,7 @@ public final class RaceTypeMenu {
         gui = new Gui(racePlugin())
             .size(6 * 9)
             .layer(GuiOverlay.BLANK, YELLOW)
+            .layer(GuiOverlay.TOP_BAR, GOLD)
             .title(text("Select a category", BLACK));
         final List<RaceType> typeList = new ArrayList<>();
         for (RaceType raceType : RaceType.values()) {
@@ -55,12 +57,12 @@ public final class RaceTypeMenu {
                                                          text(worldList.size(), GOLD))));
                     clearAttributes(meta);
                 });
-            final int guiy = 1 + 2 * (i / 4);
+            final int guiy = 2 + 2 * (i / 4);
             final int guix = 1 + 2 * (i % 4);
             icon.setAmount(Math.max(1, Math.min(99, worldList.size())));
             gui.setItem(guix, guiy, icon, click -> this.onClickRaceType(raceType, click));
         }
-        gui.setItem(4, 5,
+        gui.setItem(6, 0,
                     tooltip(Mytems.VOTE_FIREWORK.createItemStack(),
                             List.of(text("Start Map Vote", BLUE),
                                     text("Everybody in the Race", GRAY),
@@ -75,6 +77,16 @@ public final class RaceTypeMenu {
                         player.performCommand("race startvote");
                         player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1f);
                     });
+        gui.setItem(2, 0, Mytems.TURN_LEFT.createIcon(List.of(text("Return to lobby", GRAY))), click -> {
+                if (!click.isLeftClick()) return;
+                player.eject();
+                player.leaveVehicle();
+                player.teleport(racePlugin().getLobbyWorld().getSpawnLocation());
+            });
+        gui.setItem(Gui.OUTSIDE, null, click -> {
+                if (!click.isLeftClick()) return;
+                MenuItemEvent.openMenu(player);
+            });
         gui.open(player);
     }
 
