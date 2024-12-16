@@ -61,6 +61,7 @@ public final class RacePlugin extends JavaPlugin {
             raceServerListener = new RaceServerListener();
             raceServerListener.enable();
             raceAdminCommand.enable();
+            new MenuListener(this).enable();
             break;
         default: break;
         }
