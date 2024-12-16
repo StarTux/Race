@@ -1409,4 +1409,12 @@ public final class Race {
             }
         }
     }
+
+    public static Race inWorld(String worldName) {
+        return RacePlugin.racePlugin().getRaces().inWorld(worldName);
+    }
+
+    public static Race inWorld(World world) {
+        return RacePlugin.racePlugin().getRaces().inWorld(world);
+    }
 }
