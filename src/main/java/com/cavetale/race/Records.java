@@ -59,6 +59,7 @@ public final class Records {
                 plugin.getDatabase().insertAsync(row, null);
                 rows.add(row);
             } else {
+                if (row.getTime() <= time) return;
                 row.setTime(time);
                 row.setNow();
                 plugin.getDatabase().updateAsync(row, null, "player", "time", "date");
