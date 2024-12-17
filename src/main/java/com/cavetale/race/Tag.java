@@ -54,6 +54,8 @@ public final class Tag implements EditMenuAdapter {
     @EditMenuItem(hidden = true, description = "ONLY USED FOR RACING")
     protected int phaseTicks;
     @EditMenuItem(hidden = true, description = "ONLY USED FOR RACING")
+    protected int totalPhaseTicks;
+    @EditMenuItem(hidden = true, description = "ONLY USED FOR RACING")
     protected List<Racer> racers = new ArrayList<>();
     @EditMenuItem(hidden = true, description = "ONLY USED FOR RACING")
     protected long startTime = 0L;

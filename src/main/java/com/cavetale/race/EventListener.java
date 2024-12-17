@@ -176,10 +176,24 @@ public final class EventListener implements Listener {
             }
         } else {
             race.sidebar(player, lines);
-            race.onPlayerHud(player, event);
         }
         if (!lines.isEmpty()) {
             event.sidebar(PlayerHudPriority.HIGHEST, lines);
+        }
+        if (race != null) {
+            switch (race.getTag().getPhase()) {
+            case START:
+                race.onPlayerHudStart(player, event);
+                break;
+            case RACE:
+                race.onPlayerHud(player, event);
+                break;
+            case FINISH:
+                race.onPlayerHudFinish(player, event);
+                break;
+            default:
+                break;
+            }
         }
     }
 

@@ -82,6 +82,9 @@ public final class RaceTypeMenu {
                 player.eject();
                 player.leaveVehicle();
                 player.teleport(racePlugin().getLobbyWorld().getSpawnLocation());
+                Race.resetSpeed(player);
+                Race.clearInventory(player);
+                Race.resetHealthAndFood(player);
             });
         gui.setItem(Gui.OUTSIDE, null, click -> {
                 if (!click.isLeftClick()) return;

@@ -73,7 +73,6 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
 
     private boolean view(Player player, String[] args) {
         if (args.length != 1) return false;
-        requirePlayerFreedom(player);
         final BuildWorld buildWorld = requireRaceMap(args[0]);
         new RaceMapMenu(player, buildWorld).open();
         return true;

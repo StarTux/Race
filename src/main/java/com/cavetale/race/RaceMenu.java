@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import com.cavetale.core.item.ItemKinds;
+import com.cavetale.race.sql.SQLPlayerMapRecord;
 import com.winthier.creative.BuildWorld;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,10 +14,13 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
+import static com.cavetale.core.font.Unicode.tiny;
 import static com.cavetale.mytems.util.Text.wrapLore;
+import static com.cavetale.race.RacePlugin.racePlugin;
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.newline;
+import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.separator;
@@ -47,6 +51,14 @@ public final class RaceMenu {
                     if (raw.length() > 16) raw = raw.substring(0, 16);
                     final List<Component> tooltip = new ArrayList<>();
                     tooltip.add(text(buildWorld.getName(), BLUE));
+                    if (racePlugin().hasRecords()) {
+                        final SQLPlayerMapRecord yourRecord = racePlugin().getRecords().find(buildWorld.getPath(), player.getUniqueId());
+                        tooltip.add(textOfChildren(text(tiny("your record"), GRAY),
+                                                   space(),
+                                                   (yourRecord != null
+                                                    ? text(Race.formatTime(yourRecord.getTime()), GREEN)
+                                                    : text("N/A", DARK_RED))));
+                    }
                     if (buildWorld.getRow().getDescription() != null) {
                         tooltip.addAll(wrapLore(buildWorld.getRow().getDescription(), c -> c.color(LIGHT_PURPLE)));
                     }

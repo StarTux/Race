@@ -15,6 +15,7 @@ depend:
 - Fam
 - Area
 - Creative
+- SQL
 softdepend: []
 
 commands:

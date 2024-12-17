@@ -150,6 +150,13 @@ public final class Race {
         tag.phase = newPhase;
         tag.phaseTicks = 0;
         clearEntities();
+        switch (newPhase) {
+        case START:
+            tag.totalPhaseTicks = 20 * 30;
+            break;
+        default:
+            break;
+        }
     }
 
     private void tickEdit(int ticks) {
@@ -167,7 +174,7 @@ public final class Race {
 
     private void tickStart(int ticks) {
         pruneRacers();
-        int ticksLeft = 200 - tag.phaseTicks;
+        final int ticksLeft = tag.totalPhaseTicks - tag.phaseTicks;
         final long now = System.currentTimeMillis();
         if (ticksLeft < 0) {
             setPhase(Phase.RACE);
@@ -199,7 +206,7 @@ public final class Race {
             }
             return;
         }
-        int secondsLeft = ticksLeft / 20;
+        final int secondsLeft = ticksLeft / 20;
         if (ticksLeft % 20 == 0) {
             switch (secondsLeft) {
             case 5:
@@ -436,6 +443,9 @@ public final class Race {
         racer.finished = true;
         racer.finishTime = System.currentTimeMillis() - tag.startTime;
         racer.finishIndex = tag.finishIndex++;
+        if (timeTrial && plugin.hasRecords()) {
+            plugin.getRecords().set(buildWorld.getPath(), racer.getUuid(), racer.finishTime);
+        }
         if (player.getVehicle() != null) player.getVehicle().remove();
         final String timeString = formatTime(racer.finishTime);
         final String rankString = "" + (racer.finishIndex + 1);
@@ -785,13 +795,11 @@ public final class Race {
             player.setAllowFlight(true);
             player.setFlying(true);
             player.setFlySpeed(0.0f);
+            player.setWalkSpeed(0f);
             player.showTitle(title(text("Race", GREEN, TextDecoration.ITALIC),
                                    text("The Race Begins", GREEN),
                                    times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofSeconds(1))));
-            player.setWalkSpeed(0f);
-            player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
-            player.setFoodLevel(20);
-            player.setSaturation(20f);
+            resetHealthAndFood(player);
             player.getInventory().setItem(0, GoodyItem.RETURN.createItemStack());
             if (tag.type == RaceType.STRIDER) {
                 player.getInventory().addItem(new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK));
@@ -869,7 +877,7 @@ public final class Race {
         }
     }
 
-    private void resetSpeed(Player player) {
+    public static void resetSpeed(Player player) {
         player.setWalkSpeed(0.2f);
         player.setFlySpeed(0.1f);
         AttributeInstance inst = player.getAttribute(Attribute.MOVEMENT_SPEED);
@@ -878,6 +886,13 @@ public final class Race {
                 inst.removeModifier(modifier);
             }
         }
+        player.setFallDistance(0);
+    }
+
+    public static void resetHealthAndFood(Player player) {
+        player.setHealth(player.getAttribute(Attribute.MAX_HEALTH).getValue());
+        player.setFoodLevel(20);
+        player.setSaturation(20f);
     }
 
     public Checkpoint getLastCheckpoint(Racer racer) {
@@ -1239,6 +1254,15 @@ public final class Race {
         return "th";
     }
 
+    protected void onPlayerHudStart(Player player, PlayerHudEvent event) {
+        Racer racer = getRacer(player);
+        if (racer == null || !racer.racing) return;
+        final int ticksLeft = tag.totalPhaseTicks - tag.phaseTicks;
+        event.bossbar(PlayerHudPriority.HIGH, text("Get Ready", GREEN),
+                      BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
+                      1f - ((float) tag.phaseTicks / (float) tag.totalPhaseTicks));
+    }
+
     protected void onPlayerHud(Player player, PlayerHudEvent event) {
         Racer racer = getRacer(player);
         if (racer == null || !racer.racing) return;
@@ -1267,6 +1291,18 @@ public final class Race {
         event.bossbar(PlayerHudPriority.HIGH, join(separator(space()), titleComponents),
                       BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
                       (float) racer.checkpointIndex / (float) tag.checkpoints.size());
+    }
+
+    protected void onPlayerHudFinish(Player player, PlayerHudEvent event) {
+        Racer racer = getRacer(player);
+        if (racer == null || !racer.racing) return;
+        event.bossbar(PlayerHudPriority.HIGH,
+                      textOfChildren(text(tiny("your time "), GRAY),
+                                     (racer.finished
+                                      ? text(formatTime(racer.finishTime), GREEN)
+                                      : text("N/A", DARK_RED))),
+                      BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
+                      1f);
     }
 
     /**

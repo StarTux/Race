@@ -1,19 +1,27 @@
 package com.cavetale.race;
 
 import com.cavetale.core.font.GuiOverlay;
+import com.cavetale.core.playercache.PlayerCache;
+import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.util.Gui;
+import com.cavetale.race.sql.SQLPlayerMapRecord;
 import com.winthier.creative.BuildWorld;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
+import static com.cavetale.core.font.Unicode.tiny;
 import static com.cavetale.mytems.util.Items.tooltip;
 import static com.cavetale.race.RacePlugin.racePlugin;
+import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 @RequiredArgsConstructor
@@ -29,17 +37,37 @@ public final class RaceMapMenu {
             .size(6 * 9)
             .layer(GuiOverlay.BLANK, YELLOW)
             .title(text(buildWorld.getName(), BLACK));
-        gui.setItem(6, 2,
-                    tooltip(new ItemStack(Material.CLOCK),
-                            List.of(text("Time Trial", BLUE),
-                                    text("Race against the clock", GRAY),
-                                    text("and try to beat your", GRAY),
-                                    text("own record.", GRAY))),
-                    click -> {
-                        if (!click.isLeftClick()) return;
-                        player.performCommand("race timetrial " + buildWorld.getPath());
-                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1f);
-                    });
+        { // Time Trial
+            final List<Component> tooltip = new ArrayList<>();
+            tooltip.addAll(List.of(text("Time Trial", BLUE),
+                                   text("Race against the clock", GRAY),
+                                   text("and try to beat your", GRAY),
+                                   text("own record.", GRAY)));
+            if (racePlugin().hasRecords()) {
+                final SQLPlayerMapRecord yourRecord = racePlugin().getRecords().find(buildWorld.getPath(), player.getUniqueId());
+                tooltip.add(textOfChildren(text(tiny("your record"), GRAY),
+                                           space(),
+                                           (yourRecord != null
+                                            ? text(Race.formatTime(yourRecord.getTime()), GREEN)
+                                            : text("N/A", DARK_RED))));
+                int nextRank = 1;
+                for (SQLPlayerMapRecord record : racePlugin().getRecords().rank(buildWorld.getPath())) {
+                    final int rank = nextRank++;
+                    if (rank > 10) break;
+                    tooltip.add(textOfChildren(Glyph.toComponent("" + rank),
+                                               space(),
+                                               text(Race.formatTime(record.getTime()), BLUE),
+                                               space(),
+                                               text(PlayerCache.nameForUuid(record.getPlayer()))));
+                }
+            }
+            gui.setItem(6, 2, tooltip(new ItemStack(Material.CLOCK), tooltip),
+                        click -> {
+                            if (!click.isLeftClick()) return;
+                            player.performCommand("race timetrial " + buildWorld.getPath());
+                            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1f);
+                        });
+        }
         gui.setItem(2, 2,
                     tooltip(new ItemStack(Material.LEAD),
                             List.of(text("Practice", BLUE),

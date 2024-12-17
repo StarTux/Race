@@ -8,6 +8,8 @@ import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.SQLTrophy;
 import com.cavetale.fam.trophy.Trophies;
 import com.cavetale.mytems.item.trophy.TrophyCategory;
+import com.cavetale.race.sql.SQLPlayerMapRecord;
+import com.winthier.sql.SQLDatabase;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +40,8 @@ public final class RacePlugin extends JavaPlugin {
     protected File saveFile;
     private CreativeServerListener creativeServerListener;
     private RaceServerListener raceServerListener;
+    private SQLDatabase database;
+    private Records records;
 
     @Override
     public void onLoad() {
@@ -51,6 +55,7 @@ public final class RacePlugin extends JavaPlugin {
         raceEditCommand.enable();
         eventListener.enable();
         load();
+        enableDatabase();
         getServer().getScheduler().runTaskTimer(this, races::tick, 1, 1);
         switch (NetworkServer.current()) {
         case CREATIVE:
@@ -61,6 +66,8 @@ public final class RacePlugin extends JavaPlugin {
             raceServerListener = new RaceServerListener();
             raceServerListener.enable();
             raceAdminCommand.enable();
+            records = new Records(this);
+            records.enable();
             new MenuListener(this).enable();
             break;
         default: break;
@@ -75,6 +82,15 @@ public final class RacePlugin extends JavaPlugin {
         if (creativeServerListener != null) {
             creativeServerListener.disable();
         }
+        if (database != null) {
+            database.close();
+        }
+    }
+
+    private void enableDatabase() {
+        database = new SQLDatabase(this);
+        database.registerTables(List.of(SQLPlayerMapRecord.class));
+        database.createAllTables();
     }
 
     protected void load() {
@@ -173,5 +189,9 @@ public final class RacePlugin extends JavaPlugin {
 
     public World getLobbyWorld() {
         return Bukkit.getWorlds().get(0);
+    }
+
+    public boolean hasRecords() {
+        return records != null;
     }
 }
