@@ -161,7 +161,11 @@ public final class Race {
         clearEntities();
         switch (newPhase) {
         case START:
-            tag.totalPhaseTicks = 20 * 30;
+            if (timeTrial || practice) {
+                tag.totalPhaseTicks = 20 * 10;
+            } else {
+                tag.totalPhaseTicks = 20 * 30;
+            }
             break;
         default:
             break;
