@@ -101,7 +101,7 @@ public final class Race {
     private final File saveFile;
     protected final Tag tag;
     protected Map<Vec3i, Goody> goodies = new HashMap<>();
-    protected Map<Vec3i, Goody> coins = new HashMap<>();
+    protected Map<Vec3i, Coin> coins = new HashMap<>();
     protected Map<Vec3i, Bogey> creepers = new HashMap<>();
     protected Map<Vec3i, Bogey> skeletons = new HashMap<>();
     public static final int MAX_COINS = 100;
@@ -261,13 +261,10 @@ public final class Race {
                 }
             }
         }
-        if (racer.coinCooldown < now) {
-            for (int y = -1; y < 2; y += 1) {
-                for (int x = -1; x < 2; x += 1) {
-                    for (int z = -1; z < 2; z += 1) {
-                        onTouchCoin(player, racer, vec.add(x, y, z));
-                        if (racer.coinCooldown >= now) break;
-                    }
+        for (int y = -1; y < 2; y += 1) {
+            for (int x = -1; x < 2; x += 1) {
+                for (int z = -1; z < 2; z += 1) {
+                    onTouchCoin(player, racer, vec.add(x, y, z));
                 }
             }
         }
@@ -333,20 +330,20 @@ public final class Race {
     }
 
     private void onTouchCoin(Player player, Racer racer, Vec3i vector) {
-        Goody coin = coins.get(vector);
-        if (coin == null || coin.entity == null || coin.cooldown > 0) return;
-        Location loc = coin.entity.getLocation();
-        coin.entity.remove();
-        coin.entity = null;
-        coin.cooldown = 20 * 10;
+        Coin coin = coins.get(vector);
+        if (coin == null || coin.collectedBy.contains(player.getUniqueId())) return;
+        coin.collectedBy.add(player.getUniqueId());
+        if (coin.entity != null) {
+            player.hideEntity(plugin, coin.entity);
+        }
+        final Location loc = coin.entity.getLocation();
         setCoins(player, racer, racer.coins + 1);
-        world.playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 0.1f, 2.0f);
+        player.playSound(loc, Sound.ENTITY_ITEM_PICKUP, SoundCategory.MASTER, 0.1f, 2.0f);
         player.setFoodLevel(20);
         player.setSaturation(20f);
         if (tag.type.playerIsDamageable()) {
             player.setHealth(Math.min(player.getHealth() + 1.0, player.getAttribute(Attribute.MAX_HEALTH).getValue()));
         }
-        racer.coinCooldown = System.currentTimeMillis() + 400L;
     }
 
     protected void setCoins(Player player, Racer racer, int value) {
@@ -358,7 +355,9 @@ public final class Race {
     }
 
     protected void resetCoinsOnDeath(Player player, Racer racer) {
-        setCoins(player, racer, racer.coins / 2);
+        final int loss = Math.max(1, racer.coins / 10);
+        final int playerCoins = Math.max(0, racer.coins - loss);
+        setCoins(player, racer, playerCoins);
     }
 
     private static final UUID SPEED_BONUS_UUID = UUID.fromString("5209c14a-7d9c-41e9-858a-2b6da987486a");
@@ -1017,14 +1016,10 @@ public final class Race {
             }
         }
         for (Vec3i vector : tag.coins) {
-            Goody coin = coins.computeIfAbsent(vector, v -> new Goody(v));
-            if (coin.cooldown > 0) {
-                coin.cooldown -= 1;
-                continue;
-            }
+            Coin coin = coins.computeIfAbsent(vector, v -> new Coin(v));
             if (coin.entity == null || coin.entity.isDead()) {
                 coin.entity = null;
-                Location location = coin.where.toCenterLocation(getWorld());
+                final Location location = coin.where.toCenterLocation(getWorld());
                 if (!location.isChunkLoaded()) continue;
                 coin.entity = location.getWorld().spawn(location, ItemDisplay.class, e -> {
                         e.setPersistent(false);
@@ -1036,6 +1031,12 @@ public final class Race {
                         e.setBrightness(new ItemDisplay.Brightness(15, 15));
                         e.setItemStack(coinItem.createIcon());
                     });
+                for (UUID uuid : coin.collectedBy) {
+                    Player player = Bukkit.getPlayer(uuid);
+                    if (player != null) {
+                        player.hideEntity(plugin, coin.entity);
+                    }
+                }
             }
         }
         for (Cuboid cuboid : tag.creepers) {
@@ -1135,7 +1136,7 @@ public final class Race {
             }
         }
         goodies.clear();
-        for (Goody coin : coins.values()) {
+        for (Coin coin : coins.values()) {
             if (coin.entity != null) {
                 coin.entity.remove();
                 coin.entity = null;
