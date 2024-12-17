@@ -51,14 +51,21 @@ public final class RaceMapMenu {
                                             ? text(Race.formatTime(yourRecord.getTime()), GREEN)
                                             : text("N/A", DARK_RED))));
                 int nextRank = 1;
+                int nextDisplayRank = 0;
+                long lastTime = -1L;
                 for (SQLPlayerMapRecord record : racePlugin().getRecords().rank(buildWorld.getPath())) {
                     final int rank = nextRank++;
                     if (rank > 10) break;
-                    tooltip.add(textOfChildren(Glyph.toComponent("" + rank),
+                    if (lastTime != record.getTime()) {
+                        nextDisplayRank += 1;
+                        lastTime = record.getTime();
+                    }
+                    final int displayRank = nextDisplayRank;
+                    tooltip.add(textOfChildren(Glyph.toComponent("" + displayRank),
                                                space(),
-                                               text(Race.formatTime(record.getTime()), BLUE),
+                                               text(Race.formatTime(record.getTime()), WHITE),
                                                space(),
-                                               text(PlayerCache.nameForUuid(record.getPlayer()))));
+                                               text(PlayerCache.nameForUuid(record.getPlayer()), GRAY)));
                 }
             }
             gui.setItem(6, 2, tooltip(new ItemStack(Material.CLOCK), tooltip),
