@@ -40,6 +40,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
@@ -48,6 +49,7 @@ import org.bukkit.attribute.Attributable;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.attribute.AttributeModifier.Operation;
 import org.bukkit.block.Block;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Creeper;
@@ -108,6 +110,13 @@ public final class Race {
     protected Mytems coinItem;
     @Setter private boolean timeTrial;
     @Setter private boolean practice;
+    private static NamespacedKey speedBonusKey;
+    private static NamespacedKey stepHeightKey;;
+
+    public static void staticEnable() {
+        speedBonusKey = new NamespacedKey(RacePlugin.racePlugin(), "speed_bonus");
+        stepHeightKey = new NamespacedKey(RacePlugin.racePlugin(), "step_height");
+    }
 
     public void onEnable() {
         this.coinItem = tag.type.getCoinItem();
@@ -201,6 +210,8 @@ public final class Race {
                 }
                 if (tag.type == RaceType.SONIC) {
                     player.getInventory().setBoots(Mytems.SNEAKERS.createItemStack());
+                    player.getAttribute(Attribute.STEP_HEIGHT)
+                        .addModifier(new AttributeModifier(stepHeightKey, 0.5, Operation.ADD_NUMBER));
                 }
                 racer.lapStartTime = now;
             }
@@ -360,8 +371,6 @@ public final class Race {
         setCoins(player, racer, playerCoins);
     }
 
-    private static final UUID SPEED_BONUS_UUID = UUID.fromString("5209c14a-7d9c-41e9-858a-2b6da987486a");
-
     protected void updateVehicleSpeed(Player player, Racer racer) {
         if (tag.type == RaceType.BROOM) {
             double factor = racer.coins == 0
@@ -372,30 +381,24 @@ public final class Race {
             AttributeInstance inst = attributable.getAttribute(Attribute.MOVEMENT_SPEED);
             if (inst == null) return;
             for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
-                if (SPEED_BONUS_UUID.equals(modifier.getUniqueId())) {
+                if (speedBonusKey.equals(modifier.getKey())) {
                     inst.removeModifier(modifier);
                 }
             }
             if (racer.coins >= 0) {
                 double factor = 0.5 * ((double) racer.coins / (double) MAX_COINS);
-                inst.addModifier(new AttributeModifier(SPEED_BONUS_UUID,
-                                                       "race_coins",
-                                                       factor,
-                                                       AttributeModifier.Operation.MULTIPLY_SCALAR_1));
+                inst.addModifier(new AttributeModifier(speedBonusKey, factor, Operation.MULTIPLY_SCALAR_1));
             }
         } else if (tag.type.playerHasSpeed()) {
             AttributeInstance inst = player.getAttribute(Attribute.MOVEMENT_SPEED);
             for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
-                if (SPEED_BONUS_UUID.equals(modifier.getUniqueId())) {
+                if (speedBonusKey.equals(modifier.getKey())) {
                     inst.removeModifier(modifier);
                 }
             }
             if (racer.coins >= 0) {
                 double factor = 0.5 * ((double) racer.coins / (double) MAX_COINS);
-                inst.addModifier(new AttributeModifier(SPEED_BONUS_UUID,
-                                                       "race_coins",
-                                                       factor,
-                                                       AttributeModifier.Operation.MULTIPLY_SCALAR_1));
+                inst.addModifier(new AttributeModifier(speedBonusKey, factor, Operation.MULTIPLY_SCALAR_1));
             }
         }
     }
@@ -881,7 +884,9 @@ public final class Race {
         player.setFlySpeed(0.1f);
         AttributeInstance inst = player.getAttribute(Attribute.MOVEMENT_SPEED);
         for (AttributeModifier modifier : List.copyOf(inst.getModifiers())) {
-            if (SPEED_BONUS_UUID.equals(modifier.getUniqueId())) {
+            if (speedBonusKey.equals(modifier.getKey())) {
+                inst.removeModifier(modifier);
+            } else if (stepHeightKey.equals(modifier.getKey())) {
                 inst.removeModifier(modifier);
             }
         }

@@ -72,6 +72,7 @@ public final class RacePlugin extends JavaPlugin {
             break;
         default: break;
         }
+        Race.staticEnable();
     }
 
     @Override
