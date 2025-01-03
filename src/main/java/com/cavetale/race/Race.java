@@ -70,7 +70,6 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.BoundingBox;
@@ -213,9 +212,7 @@ public final class Race {
                     ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).startFlying(player);
                 }
                 if (tag.type == RaceType.SONIC) {
-                    player.getInventory().setBoots(Mytems.SNEAKERS.createItemStack());
-                    player.getAttribute(Attribute.STEP_HEIGHT)
-                        .addModifier(new AttributeModifier(stepHeightKey, 0.5, Operation.ADD_NUMBER));
+                    player.getInventory().setBoots(Mytems.GOLDEN_SNEAKERS.createItemStack());
                 }
                 racer.lapStartTime = now;
             }
@@ -1429,9 +1426,6 @@ public final class Race {
         if (tag.phase == Phase.IDLE) return;
         Racer racer = getRacer(player);
         if (racer == null || !racer.racing) return;
-        if (tag.type == RaceType.SONIC) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 15, 1, true, false, true));
-        }
     }
 
     protected void onEntityExplode(Entity entity, EntityExplodeEvent event) {
