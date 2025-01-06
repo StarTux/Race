@@ -35,6 +35,12 @@ public final class Records {
         mapRecords.computeIfAbsent(path, MapRecords::new).set(player, time);
     }
 
+    public List<SQLPlayerMapRecord> clear(String path) {
+        final MapRecords records = mapRecords.get(path);
+        if (records == null) return null;
+        return records.clear();
+    }
+
     @RequiredArgsConstructor
     private final class MapRecords {
         private final String mapPath;
@@ -64,6 +70,14 @@ public final class Records {
                 row.setNow();
                 plugin.getDatabase().updateAsync(row, null, "player", "time", "date");
             }
+        }
+
+        public List<SQLPlayerMapRecord> clear() {
+            if (rows.isEmpty()) return List.of();
+            final List<SQLPlayerMapRecord> oldRows = List.copyOf(rows);
+            plugin.getDatabase().deleteAsync(rows, null);
+            rows.clear();
+            return oldRows;
         }
     }
 

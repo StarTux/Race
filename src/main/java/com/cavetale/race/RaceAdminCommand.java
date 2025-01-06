@@ -6,6 +6,7 @@ import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.playercache.PlayerCache;
+import com.cavetale.race.sql.SQLPlayerMapRecord;
 import com.winthier.creative.BuildWorld;
 import com.winthier.creative.file.Files;
 import com.winthier.creative.review.MapReview;
@@ -16,6 +17,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 /**
@@ -63,6 +65,17 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
                         CommandArgCompleter.integer(i -> true))
             .description("Modify player score")
             .senderCaller(this::scoreAdd);
+        // records
+        CommandNode recordNode = rootNode.addChild("record")
+            .description("Timing records");
+        recordNode.addChild("show").arguments("<world>")
+            .completers(CommandArgCompleter.supplyList(RaceAdminCommand::listRaceWorldPaths))
+            .description("Print map records")
+            .senderCaller(this::recordShow);
+        recordNode.addChild("clear").arguments("<world>")
+            .completers(CommandArgCompleter.supplyList(RaceAdminCommand::listRaceWorldPaths))
+            .description("Clear all map records")
+            .senderCaller(this::recordClear);
     }
 
     private static List<String> listRaceWorldPaths() {
@@ -73,13 +86,18 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
         return result;
     }
 
-    private boolean start(CommandSender sender, String[] args) {
-        if (args.length != 1) return false;
-        final String path = args[0];
+    private BuildWorld requireRaceWorld(String path) {
         final BuildWorld buildWorld = BuildWorld.findWithPath(path);
         if (buildWorld == null || buildWorld.getRow().parseMinigame() != MinigameMatchType.RACE) {
             throw new CommandWarn("Race world not found: " + path);
         }
+        return buildWorld;
+    }
+
+    private boolean start(CommandSender sender, String[] args) {
+        if (args.length != 1) return false;
+        final String path = args[0];
+        final BuildWorld buildWorld = requireRaceWorld(args[0]);
         plugin.getRaces().start(buildWorld, race -> {
                 plugin.getSave().setEventRaceWorld(race.getWorldName());
                 race.startRace(plugin.getLobbyWorld().getPlayers());
@@ -162,6 +180,35 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
         plugin.getSave().getScores().compute(target.uuid, (u, i) -> i != null ? i + amount : amount);
         plugin.save();
         sender.sendMessage("Score of " + target.name + " changed to " + plugin.getSave().getScores().get(target.uuid));
+        return true;
+    }
+
+    private boolean recordShow(CommandSender sender, String[] args) {
+        if (args.length != 1) return false;
+        final BuildWorld buildWorld = requireRaceWorld(args[0]);
+        final List<SQLPlayerMapRecord> rows = plugin.getRecords().rank(buildWorld.getPath());
+        if (rows == null || rows.isEmpty()) {
+            throw new CommandWarn("No records found for world " + buildWorld.getPath());
+        }
+        sender.sendMessage(text("Found " + rows.size() + " records of world " + buildWorld.getPath(), YELLOW));
+        int index = 0;
+        for (SQLPlayerMapRecord row : rows) {
+            sender.sendMessage(textOfChildren(text(++index, BLUE),
+                                              text(" " + Race.formatTime(row.getTime()), YELLOW),
+                                              text(" " + PlayerCache.nameForUuid(row.getPlayer()), WHITE),
+                                              text(" " + row.getDate(), GRAY)));
+        }
+        return true;
+    }
+
+    private boolean recordClear(CommandSender sender, String[] args) {
+        if (args.length != 1) return false;
+        final BuildWorld buildWorld = requireRaceWorld(args[0]);
+        final List<SQLPlayerMapRecord> rows = plugin.getRecords().clear(buildWorld.getPath());
+        if (rows == null || rows.isEmpty()) {
+            throw new CommandWarn("No records found for world " + buildWorld.getPath());
+        }
+        sender.sendMessage(text("Deleted " + rows.size() + " records of world " + buildWorld.getPath(), YELLOW));
         return true;
     }
 }
