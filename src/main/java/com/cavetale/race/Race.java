@@ -924,16 +924,20 @@ public final class Race {
     public void teleportToLastCheckpoint(Player player) {
         Racer racer = getRacer(player);
         if (racer == null) return;
-        Checkpoint checkpoint = getLastCheckpoint(racer);
-        Location loc;
-        if (checkpoint.area.equals(Cuboid.ZERO)) {
+        final Location loc;
+        if (racer.checkpointIndex == 0 && racer.lap == 0) {
             loc = racer.startVector.toCenterFloorLocation(getWorld());
         } else {
-            Block block = getBottomBlock(checkpoint.area, getWorld());
-            while (!block.isPassable()) block = block.getRelative(0, 1, 0);
-            loc = block.getLocation().add(0.5, 0.0, 0.5);
+            final Checkpoint checkpoint = getLastCheckpoint(racer);
+            if (checkpoint.area.equals(Cuboid.ZERO)) {
+                loc = racer.startVector.toCenterFloorLocation(getWorld());
+            } else {
+                Block block = getBottomBlock(checkpoint.area, getWorld());
+                while (!block.isPassable()) block = block.getRelative(0, 1, 0);
+                loc = block.getLocation().add(0.5, 0.0, 0.5);
+            }
         }
-        Location ploc = player.getLocation();
+        final Location ploc = player.getLocation();
         loc.setYaw(ploc.getYaw());
         loc.setPitch(ploc.getPitch());
         if (player.getVehicle() != null) {
