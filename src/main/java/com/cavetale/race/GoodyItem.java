@@ -148,8 +148,7 @@ public enum GoodyItem {
     COIN(Category.REGULAR,
          Mytems.GOLDEN_COIN::createIcon,
          List.of(text("Coin", GOLD),
-                 text("Collect up to", GRAY),
-                 text(Race.MAX_COINS + " coins to", GRAY),
+                 text("Collect coins to", GRAY),
                  text("increase speed", GRAY)),
          (race, player, racer) -> race.tag.coins.isEmpty() ? 0.0 : 1.0,
          (race, player, racer, item) -> {

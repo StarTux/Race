@@ -105,7 +105,6 @@ public final class Race {
     protected Map<Vec3i, Coin> coins = new HashMap<>();
     protected Map<Vec3i, Bogey> creepers = new HashMap<>();
     protected Map<Vec3i, Bogey> skeletons = new HashMap<>();
-    public static final int MAX_COINS = 100;
     protected Mytems coinItem;
     @Setter private boolean timeTrial;
     @Setter private boolean practice;
@@ -157,7 +156,6 @@ public final class Race {
     public void setPhase(final Phase newPhase) {
         tag.phase = newPhase;
         tag.phaseTicks = 0;
-        clearEntities();
         switch (newPhase) {
         case START:
             if (timeTrial || practice) {
@@ -165,6 +163,9 @@ public final class Race {
             } else {
                 tag.totalPhaseTicks = 20 * 30;
             }
+            break;
+        case IDLE:
+            clearEntities();
             break;
         default:
             break;
@@ -255,6 +256,7 @@ public final class Race {
                 player.setFlySpeed(0.0f);
             }
         }
+        updateEntities();
     }
 
     private void passThroughBlock(Player player, Racer racer, Block block) {
@@ -373,11 +375,12 @@ public final class Race {
     }
 
     protected void updateVehicleSpeed(Player player, Racer racer) {
+        final int maxCoins = tag.coins.size();
+        final double factor = racer.coins > 0 && maxCoins > 0
+            ? Math.max(0.0, Math.min(1.0, (double) racer.coins / (double) maxCoins))
+            : 0.0;
         if (tag.type == RaceType.BROOM) {
-            double factor = racer.coins == 0
-                ? 0
-                : ((double) racer.coins / (double) MAX_COINS);
-            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setSpeedFactor(1.25 + 0.75 * factor);
+            ((WitchBroom) Mytems.WITCH_BROOM.getMytem()).getSessionData(player).setSpeedFactor(1.0 + 1.0 * factor);
         } else if (player.getVehicle() instanceof Attributable attributable) {
             AttributeInstance inst = attributable.getAttribute(Attribute.MOVEMENT_SPEED);
             if (inst == null) return;
@@ -387,8 +390,7 @@ public final class Race {
                 }
             }
             if (racer.coins >= 0) {
-                double factor = 0.5 * ((double) racer.coins / (double) MAX_COINS);
-                inst.addModifier(new AttributeModifier(speedBonusKey, factor, Operation.MULTIPLY_SCALAR_1));
+                inst.addModifier(new AttributeModifier(speedBonusKey, 1.5 * factor, Operation.MULTIPLY_SCALAR_1));
             }
         } else if (tag.type.playerHasSpeed()) {
             AttributeInstance inst = player.getAttribute(Attribute.MOVEMENT_SPEED);
@@ -398,8 +400,7 @@ public final class Race {
                 }
             }
             if (racer.coins >= 0) {
-                double factor = 0.5 * ((double) racer.coins / (double) MAX_COINS);
-                inst.addModifier(new AttributeModifier(speedBonusKey, factor, Operation.MULTIPLY_SCALAR_1));
+                inst.addModifier(new AttributeModifier(speedBonusKey, 1.5 * factor, Operation.MULTIPLY_SCALAR_1));
             }
         }
     }
@@ -1265,19 +1266,22 @@ public final class Race {
             ? formatTimeShort(tag.maxDuration * 1000L)
             : "" + Unicode.INFINITY.character;
         lines.add(textOfChildren(text(tiny("time "), GRAY), text(time, YELLOW), text("/", WHITE), text(maxTime, RED)));
-        for (Racer racer : racers) {
-            Player racerPlayer = racer.getPlayer();
-            Component playerName = racerPlayer != null ? racerPlayer.displayName() : text(racer.name);
-            int index = i++;
-            if (index > 9) break;
-            if (racer.finished) {
-                lines.add(textOfChildren(text("" + (index + 1) + " "), playerName).color(GOLD));
-            } else if (!tag.coins.isEmpty()) {
-                lines.add(textOfChildren(text(index + 1 + " "),
-                                         coinItem.component, text(racer.coins + " ", YELLOW),
-                                         playerName).color(WHITE));
-            } else {
-                lines.add(textOfChildren(text(index + 1 + " "), playerName).color(WHITE));
+        if (!practice && !timeTrial) {
+            for (Racer racer : racers) {
+                Player racerPlayer = racer.getPlayer();
+                Component playerName = racerPlayer != null ? racerPlayer.displayName() : text(racer.name);
+                int index = i++;
+                if (index > 9) break;
+                if (racer.finished) {
+                    lines.add(textOfChildren(text("" + (index + 1) + " "), playerName).color(GOLD));
+                } else if (!tag.coins.isEmpty()) {
+                    lines.add(textOfChildren(text((index + 1) + " ", WHITE),
+                                             coinItem.component,
+                                             text(racer.coins, YELLOW),
+                                             text(" " + playerName, WHITE)));
+                } else {
+                    lines.add(textOfChildren(text(index + 1 + " "), playerName).color(WHITE));
+                }
             }
         }
     }
@@ -1324,7 +1328,10 @@ public final class Race {
         titleComponents.add(textOfChildren(text(tiny("time"), GRAY),
                                            text(timeString, GREEN)));
         if (!tag.coins.isEmpty()) {
-            titleComponents.add(textOfChildren(coinItem, text(racer.coins, GOLD)));
+            titleComponents.add(textOfChildren(coinItem,
+                                               text(racer.coins, GOLD),
+                                               text("/", GRAY),
+                                               text(tag.coins.size(), GOLD)));
         }
         event.bossbar(PlayerHudPriority.HIGH, join(separator(space()), titleComponents),
                       BossBar.Color.GREEN, BossBar.Overlay.PROGRESS,
