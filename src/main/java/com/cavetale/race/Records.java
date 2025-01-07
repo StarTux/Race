@@ -113,7 +113,7 @@ public final class Records {
         public List<SQLPlayerMapRecord> clear() {
             if (rows.isEmpty()) return List.of();
             final List<SQLPlayerMapRecord> oldRows = List.copyOf(rows);
-            plugin.getDatabase().deleteAsync(rows, null);
+            plugin.getDatabase().deleteAsync(oldRows, null);
             rows.clear();
             return oldRows;
         }
