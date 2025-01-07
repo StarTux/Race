@@ -410,9 +410,6 @@ public final class Race {
 
     private void progressCheckpoint(Player player, Racer racer) {
         racer.checkpointIndex += 1;
-        if (tag.type == RaceType.SONIC) {
-            setCoins(player, racer, racer.coins + 1);
-        }
         if (racer.checkpointIndex >= tag.checkpoints.size()) {
             racer.checkpointIndex = 0;
             racer.lap += 1;
