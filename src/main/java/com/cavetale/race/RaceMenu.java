@@ -1,6 +1,7 @@
 package com.cavetale.race;
 
 import com.cavetale.core.item.ItemKinds;
+import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.race.sql.SQLPlayerMapRecord;
 import com.winthier.creative.BuildWorld;
 import java.util.ArrayList;
@@ -51,16 +52,29 @@ public final class RaceMenu {
                     if (raw.length() > 16) raw = raw.substring(0, 16);
                     final List<Component> tooltip = new ArrayList<>();
                     tooltip.add(text(buildWorld.getName(), BLUE));
+                    tooltip.add(textOfChildren(text(tiny("rating "), GRAY),
+                                               buildWorld.getStarRatingComponent()));
                     if (racePlugin().hasRecords()) {
                         final SQLPlayerMapRecord yourRecord = racePlugin().getRecords().find(buildWorld.getPath(), player.getUniqueId());
-                        tooltip.add(textOfChildren(text(tiny("your record"), GRAY),
-                                                   space(),
-                                                   (yourRecord != null
-                                                    ? text(Race.formatTime(yourRecord.getTime()), GREEN)
-                                                    : text("N/A", DARK_RED))));
+                        tooltip.add(text(tiny("your record"), GRAY));
+                        if (yourRecord != null) {
+                            tooltip.add(text(Race.formatTime(yourRecord.getTime()), GREEN));
+                        } else {
+                            tooltip.add(text("N/A", DARK_RED));
+                        }
+                        final List<SQLPlayerMapRecord> ranks = racePlugin().getRecords().rank(buildWorld.getPath());
+                        tooltip.add(text(tiny("world record"), GRAY));
+                        if (ranks != null && !ranks.isEmpty()) {
+                            tooltip.add(textOfChildren(text(Race.formatTime(ranks.get(0).getTime()), RED),
+                                                       space(),
+                                                       text(PlayerCache.nameForUuid(ranks.get(0).getPlayer()), WHITE)));
+                        } else {
+                            tooltip.add(text("N/A", DARK_RED));
+                        }
                     }
                     if (buildWorld.getRow().getDescription() != null) {
-                        tooltip.addAll(wrapLore(buildWorld.getRow().getDescription(), c -> c.color(LIGHT_PURPLE)));
+                        tooltip.add(empty());
+                        tooltip.addAll(wrapLore(buildWorld.getRow().getDescription(), c -> c.color(GRAY)));
                     }
                     final String command = "/race view " + buildWorld.getPath();
                     worldLines.add(text(raw, BLUE)

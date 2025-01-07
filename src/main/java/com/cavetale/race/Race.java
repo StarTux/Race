@@ -443,16 +443,60 @@ public final class Race {
     }
 
     private void onFinish(Player player, Racer racer) {
+        if (player.getVehicle() != null) player.getVehicle().remove();
         racer.finished = true;
         racer.finishTime = System.currentTimeMillis() - tag.startTime;
         racer.finishIndex = tag.finishIndex++;
-        if (timeTrial && plugin.hasRecords()) {
-            plugin.getRecords().set(buildWorld.getPath(), racer.getUuid(), racer.finishTime);
-        }
-        if (player.getVehicle() != null) player.getVehicle().remove();
         final String timeString = formatTime(racer.finishTime);
         final String rankString = "" + (racer.finishIndex + 1);
         plugin.getLogger().info("[" + worldName + "] " + player.getName() + " finished #" + rankString + " " + timeString);
+        final Component announcement;
+        if (timeTrial && plugin.hasRecords()) {
+            final Records.InsertResult result = plugin.getRecords().set(buildWorld.getPath(), racer.getUuid(), racer.finishTime);
+            plugin.getLogger().info("[" + worldName + "] Time trial pb:" + result.isPersonalBest() + " wr:" + result.isWorldRecord());
+            if (result.isWorldRecord()) {
+                announcement = textOfChildren(tag.type.getCoinItem(),
+                                              space(),
+                                              text("World Record! ", GOLD, BOLD),
+                                              player.displayName(),
+                                              space(),
+                                              text(timeString, GOLD));
+                player.showTitle(title(text("World Record!", GOLD), text(timeString, GOLD)));
+            } else if (result.isPersonalBest()) {
+                announcement = textOfChildren(tag.type.getCoinItem(),
+                                              space(),
+                                              text("Personal Best: ", GREEN, BOLD),
+                                              player.displayName(),
+                                              space(),
+                                              Glyph.toComponent("" + result.getRow().getRank()),
+                                              text(st("" + result.getRow().getRank())),
+                                              space(),
+                                              text(timeString, GREEN));
+                player.showTitle(title(text("Personal Best", GREEN), text(timeString, GREEN)));
+            } else {
+                announcement = textOfChildren(tag.type.getCoinItem(),
+                                              space(),
+                                              player.displayName(),
+                                              text(" finished in ", GRAY),
+                                              text(timeString, GREEN));
+            }
+        } else {
+            announcement = textOfChildren(tag.type.getCoinItem(),
+                                          space(),
+                                          player.displayName(),
+                                          text(" finished #", GRAY),
+                                          Glyph.toComponent(rankString),
+                                          text(" in ", GRAY),
+                                          text(timeString, GREEN));
+            player.showTitle(title(textOfChildren(Glyph.toComponent(rankString), text(st(rankString), GRAY)),
+                                   text(timeString, GREEN),
+                                   times(Duration.ofMillis(500), Duration.ofSeconds(2), Duration.ofMillis(500))));
+        }
+        for (Player target : getPresentPlayers()) {
+            target.sendMessage("");
+            target.sendMessage(announcement);
+            target.sendMessage("");
+        }
         if (plugin.getSave().isEvent()) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
             int score = getEventScore(racer.finishIndex);
@@ -477,21 +521,7 @@ public final class Race {
                 Money.get().give(player.getUniqueId(), (double) money, plugin, "Grand Prix");
             }
         }
-        player.showTitle(title(textOfChildren(Glyph.toComponent(rankString), text(st(rankString), GRAY)),
-                               text(timeString, GREEN),
-                               times(Duration.ofMillis(500), Duration.ofSeconds(2), Duration.ofMillis(500))));
         player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_DEATH, SoundCategory.MASTER, 0.5f, 2.0f);
-        for (Player target : getPresentPlayers()) {
-            target.sendMessage("");
-            target.sendMessage(textOfChildren(tag.type.getCoinItem(),
-                                              space(),
-                                              player.displayName(),
-                                              text(" finished #", GRAY),
-                                              Glyph.toComponent(rankString),
-                                              text(" in ", GRAY),
-                                              text(timeString, GREEN)));
-            target.sendMessage("");
-        }
         player.setGameMode(GameMode.SPECTATOR);
         player.setWalkSpeed(0.2f);
         player.setFlySpeed(0.1f);
@@ -1283,7 +1313,7 @@ public final class Race {
         final long seconds = time / 1000L;
         final long minutes = seconds / 60L;
         List<Component> titleComponents = new ArrayList<>();
-        if (tag.racers.size() > 0) {
+        if (tag.racers.size() > 1 && !practice && !timeTrial) {
             final String rank = "" + (racer.rank + 1);
             titleComponents.add(textOfChildren(Glyph.toComponent(rank),
                                                text(subscript(st(rank) + "/" + tag.racers.size()), GRAY)));

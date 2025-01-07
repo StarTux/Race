@@ -37,7 +37,7 @@ public enum RaceType implements EditMenuAdapter {
     PIG("Pig Race", () -> new ItemStack(Material.CARROT_ON_A_STICK)),
     ELYTRA("Elytra", () -> new ItemStack(Material.ELYTRA)),
     BROOM("Broom Race", Mytems.WITCH_BROOM::createIcon),
-    SONIC("Sonic", Mytems.SNEAKERS::createIcon),
+    SONIC("Sneakers", Mytems.SNEAKERS::createIcon),
     CAMEL("Camel Race", () -> new ItemStack(Material.CAMEL_SPAWN_EGG)),
     ;
 

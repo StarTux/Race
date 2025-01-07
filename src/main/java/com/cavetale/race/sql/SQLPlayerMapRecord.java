@@ -18,6 +18,7 @@ public final class SQLPlayerMapRecord implements SQLRow {
     private UUID player;
     private long time;
     private Date date;
+    private transient int rank;
 
     public SQLPlayerMapRecord() { }
 

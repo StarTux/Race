@@ -76,6 +76,11 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
             .completers(CommandArgCompleter.supplyList(RaceAdminCommand::listRaceWorldPaths))
             .description("Clear all map records")
             .senderCaller(this::recordClear);
+        recordNode.addChild("delete").arguments("<world> <player>")
+            .completers(CommandArgCompleter.supplyList(RaceAdminCommand::listRaceWorldPaths),
+                        CommandArgCompleter.PLAYER_CACHE)
+            .description("Delete a map record")
+            .senderCaller(this::recordDelete);
     }
 
     private static List<String> listRaceWorldPaths() {
@@ -209,6 +214,20 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
             throw new CommandWarn("No records found for world " + buildWorld.getPath());
         }
         sender.sendMessage(text("Deleted " + rows.size() + " records of world " + buildWorld.getPath(), YELLOW));
+        return true;
+    }
+
+    private boolean recordDelete(CommandSender sender, String[] args) {
+        if (args.length != 2) return false;
+        final BuildWorld buildWorld = requireRaceWorld(args[0]);
+        final PlayerCache playerCache = PlayerCache.require(args[1]);
+        final SQLPlayerMapRecord row = plugin.getRecords().delete(buildWorld.getPath(), playerCache.getUuid());
+        if (row == null) {
+            throw new CommandWarn("No record for " + playerCache.getName() + " in " + buildWorld.getPath());
+        }
+        sender.sendMessage(text("Deleted record of " + playerCache.getName() + " in " + buildWorld.getPath()
+                                + ": " + Race.formatTime(row.getTime()) + ", " + row.getDate(),
+                                YELLOW));
         return true;
     }
 }

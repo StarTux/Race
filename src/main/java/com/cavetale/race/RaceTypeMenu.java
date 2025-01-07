@@ -22,6 +22,7 @@ import static com.cavetale.race.RacePlugin.racePlugin;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextColor.color;
 
 /**
  * Display all races of a type.
@@ -36,8 +37,9 @@ public final class RaceTypeMenu {
     public void open() {
         gui = new Gui(racePlugin())
             .size(6 * 9)
-            .layer(GuiOverlay.BLANK, YELLOW)
-            .layer(GuiOverlay.TOP_BAR, GOLD)
+            .layer(GuiOverlay.BLANK, color(0xbbbbbb))
+            .layer(GuiOverlay.CHECKERED_8, color(0xaaaaaa))
+            .layer(GuiOverlay.TOP_BAR, color(0xbbbbbb))
             .title(text("Select a category", BLACK));
         final List<RaceType> typeList = new ArrayList<>();
         for (RaceType raceType : RaceType.values()) {
