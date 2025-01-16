@@ -1269,18 +1269,22 @@ public final class Race {
         if (!practice && !timeTrial) {
             for (Racer racer : racers) {
                 Player racerPlayer = racer.getPlayer();
-                Component playerName = racerPlayer != null ? racerPlayer.displayName() : text(racer.name);
                 int index = i++;
                 if (index > 9) break;
                 if (racer.finished) {
-                    lines.add(textOfChildren(text("" + (index + 1) + " "), playerName).color(GOLD));
+                    lines.add(textOfChildren(text(index + 1, GOLD),
+                                             space(),
+                                             text(racer.name, YELLOW)));
                 } else if (!tag.coins.isEmpty()) {
                     lines.add(textOfChildren(text((index + 1) + " ", WHITE),
                                              coinItem.component,
                                              text(racer.coins, YELLOW),
-                                             text(" " + playerName, WHITE)));
+                                             space(),
+                                             text(racer.name, GRAY)));
                 } else {
-                    lines.add(textOfChildren(text(index + 1 + " "), playerName).color(WHITE));
+                    lines.add(textOfChildren(text(index + 1, WHITE),
+                                             space(),
+                                             text(racer.name, GRAY)));
                 }
             }
         }
