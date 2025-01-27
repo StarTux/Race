@@ -34,7 +34,7 @@ commands:
   raceedit:
     aliases: []
     description: Race Edit Command
-    permission: race.admin
+    permission: race.edit
     usage: /raceedit
 
 permissions:
@@ -45,4 +45,8 @@ permissions:
 
   race.admin:
     description: Use /raceadmin
+    default: op
+
+  race.edit:
+    description: Use /raceedit
     default: op
