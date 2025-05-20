@@ -2,6 +2,9 @@ package com.cavetale.race;
 
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
+import com.cavetale.core.event.minigame.MinigameFlag;
+import com.cavetale.core.event.minigame.MinigameMatchCompleteEvent;
+import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.money.Money;
 import com.cavetale.core.struct.Cuboid;
@@ -167,6 +170,19 @@ public final class Race {
         case IDLE:
             clearEntities();
             break;
+        case FINISH:
+            final MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.RACE);
+            for (Racer racer : tag.racers) {
+                if (!racer.finished) continue;
+                event.addPlayerUuid(racer.uuid);
+                if (racer.finishIndex == 0) {
+                    event.addWinnerUuid(racer.uuid);
+                }
+            }
+            if (plugin.getSave().isEvent()) {
+                event.addFlags(MinigameFlag.EVENT);
+            }
+            event.callEvent();
         default:
             break;
         }
