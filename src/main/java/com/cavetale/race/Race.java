@@ -554,8 +554,8 @@ public final class Race {
                                                  Duration.ofSeconds(1))));
                     player.sendMessage(text("Timeout! The race is over", RED));
                 }
+                setPhase(Phase.FINISH); // MinigameMatchCompleteEvent
                 stopRace();
-                setPhase(Phase.FINISH);
                 MapReview.start(world, buildWorld)
                     .remindAllOnce();
             }
@@ -566,8 +566,8 @@ public final class Race {
                     player.sendMessage(text("The race is finished", GREEN));
                     player.sendMessage(empty());
                 }
+                setPhase(Phase.FINISH); // MinigameMatchCompleteEvent
                 stopRace();
-                setPhase(Phase.FINISH);
                 MapReview.start(world, buildWorld)
                     .remindAllOnce();
         }
@@ -913,7 +913,6 @@ public final class Race {
                 resetSpeed(player);
             }
         }
-        tag.racers.clear();
         clearEntities();
     }
 
