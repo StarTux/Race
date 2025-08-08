@@ -5,7 +5,6 @@ import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.winthier.creative.BuildWorld;
-import com.winthier.creative.vote.MapVote;
 import java.util.List;
 import org.bukkit.entity.Player;
 import static net.kyori.adventure.text.Component.text;
@@ -102,18 +101,9 @@ public final class RaceCommand extends AbstractCommand<RacePlugin> {
 
     private void startVote(Player player) {
         requirePlayerFreedom(player);
-        if (MapVote.isActive(MinigameMatchType.RACE)) {
+        if (!plugin.getRaces().startMapVote()) {
             throw new CommandWarn("Map vote already active!");
         }
-        MapVote.start(MinigameMatchType.RACE, v -> {
-                v.setTitle(text("Race", BLUE));
-                v.setLobbyWorld(plugin.getLobbyWorld());
-                v.setCallback(result -> {
-                        plugin.getRaces().start(result.getBuildWorldWinner(), race -> {
-                                race.startRace(plugin.getLobbyWorld().getPlayers());
-                            });
-                    });
-            });
         player.sendMessage(text("Map vote started in the lobby", GREEN));
     }
 }

@@ -10,7 +10,6 @@ import com.cavetale.race.sql.SQLPlayerMapRecord;
 import com.winthier.creative.BuildWorld;
 import com.winthier.creative.file.Files;
 import com.winthier.creative.review.MapReview;
-import com.winthier.creative.vote.MapVote;
 import java.util.ArrayList;
 import java.util.List;
 import net.kyori.adventure.text.Component;
@@ -112,16 +111,9 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
     }
 
     private void startVote(CommandSender sender) {
-        MapVote.start(MinigameMatchType.RACE, v -> {
-                v.setTitle(text("Grand Prix", BLUE));
-                v.setLobbyWorld(plugin.getLobbyWorld());
-                v.setCallback(result -> {
-                        plugin.getRaces().start(result.getBuildWorldWinner(), race -> {
-                                plugin.getSave().setEventRaceWorld(race.getWorldName());
-                                race.startRace(plugin.getLobbyWorld().getPlayers());
-                            });
-                    });
-            });
+        if (!plugin.getRaces().startMapVote()) {
+            throw new CommandWarn("Map vote already active");
+        }
         sender.sendMessage(text("Map vote started", YELLOW));
     }
 

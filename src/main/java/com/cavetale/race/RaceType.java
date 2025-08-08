@@ -27,22 +27,35 @@ import org.bukkit.inventory.ItemStack;
 @Getter
 @RequiredArgsConstructor
 public enum RaceType implements EditMenuAdapter {
-    WALK("Walking", () -> new ItemStack(Material.IRON_BOOTS)),
-    STRIDER("Strider", () -> new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK)),
-    PARKOUR("Parkour", () -> new ItemStack(Material.TRIDENT)),
-    ICE_BOAT("Ice Boats", () -> new ItemStack(Material.ICE)),
-    BOAT("Boat Race", () -> new ItemStack(Material.OAK_BOAT)),
-    HORSE("Horses", () -> new ItemStack(Material.IRON_HORSE_ARMOR)),
-    HALLOWEEN_HORSE("Halloween Horses", () -> new ItemStack(Material.ZOMBIE_HEAD)),
-    PIG("Pig Race", () -> new ItemStack(Material.CARROT_ON_A_STICK)),
-    ELYTRA("Elytra", () -> new ItemStack(Material.ELYTRA)),
-    BROOM("Broom Race", Mytems.WITCH_BROOM::createIcon),
-    SONIC("Sneakers", Mytems.SNEAKERS::createIcon),
-    CAMEL("Camel Race", () -> new ItemStack(Material.CAMEL_SPAWN_EGG)),
+    WALK("Walking", () -> new ItemStack(Material.IRON_BOOTS),
+         "Let's walk!"),
+    STRIDER("Strider", () -> new ItemStack(Material.WARPED_FUNGUS_ON_A_STICK),
+            "Steer your strider with a warped fungus on a stick."),
+    PARKOUR("Parkour", () -> new ItemStack(Material.TRIDENT),
+            "Walk on foot and try to complete the parkour."),
+    ICE_BOAT("Ice Boats", () -> new ItemStack(Material.ICE),
+             "A high speed boat race on ice!"),
+    BOAT("Boat Race", () -> new ItemStack(Material.OAK_BOAT),
+         "A boat race on water."),
+    HORSE("Horses", () -> new ItemStack(Material.IRON_HORSE_ARMOR),
+          "Collect golden coins to speed up and heal your horse."),
+    HALLOWEEN_HORSE("Halloween Horses", () -> new ItemStack(Material.ZOMBIE_HEAD),
+                    "Collect golden coins to speed up and heal your horse."),
+    PIG("Pig Race", () -> new ItemStack(Material.CARROT_ON_A_STICK),
+        "Steer your pig with a carrot on a stick. Collect golden coins to speed up and heal your piggy."),
+    ELYTRA("Elytra", () -> new ItemStack(Material.ELYTRA),
+           "You get an elytra as soon as the countdown ends, so make sure to double jump instantly! Do not miss any of the golden ring checkpoints. They give you an additional boost."),
+    BROOM("Broom Race", Mytems.WITCH_BROOM::createIcon,
+          "You get your broom as soon as the countdown ends. Remount your broom by right clicking it. Collect golden coins to speed up."),
+    SONIC("Sneakers", Mytems.SNEAKERS::createIcon,
+         "We run on foot with special sneakers. Collect golden hoops to heal up and increase your speed. Do not miss any of the golden ring checkpoints!"),
+    CAMEL("Camel Race", () -> new ItemStack(Material.CAMEL_SPAWN_EGG),
+          "Camels can lunge forwards. Collect golden coins to speed up and heal your camel."),
     ;
 
     private final String displayName;
     private final Supplier<ItemStack> iconSupplier;
+    private final String description;
 
     public boolean isMounted() {
         switch (this) {

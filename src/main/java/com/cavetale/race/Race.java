@@ -6,6 +6,7 @@ import com.cavetale.core.event.minigame.MinigameFlag;
 import com.cavetale.core.event.minigame.MinigameMatchCompleteEvent;
 import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.font.Unicode;
+import com.cavetale.core.item.ItemKinds;
 import com.cavetale.core.money.Money;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
@@ -238,6 +239,13 @@ public final class Race {
         final int secondsLeft = ticksLeft / 20;
         if (ticksLeft % 20 == 0) {
             switch (secondsLeft) {
+            case 20:
+                for (Player player : getPresentPlayers()) {
+                    player.sendMessage(textOfChildren(ItemKinds.icon(tag.getType().createIcon()),
+                                                      text(tag.getType().getDisplayName(), GOLD)));
+                    player.sendMessage(text(tag.getType().getDescription(), WHITE));
+                }
+                break;
             case 5:
             case 4:
             case 3:
@@ -837,6 +845,8 @@ public final class Race {
             player.sendActionBar(text("You joined the race!", GREEN));
             clearInventory(player);
             //player.getInventory().setItem(7, GoodyItem.WAYPOINT.createItemStack());
+            player.eject();
+            player.leaveVehicle();
             player.setGameMode(GameMode.ADVENTURE);
             player.teleport(getStartLocation(racer));
             player.setAllowFlight(true);
@@ -864,6 +874,7 @@ public final class Race {
         }
         tag.racerCount = tag.racers.size();
         tag.startTime = System.currentTimeMillis();
+        buildWorld.announceMap(world);
         setPhase(Phase.START);
     }
 

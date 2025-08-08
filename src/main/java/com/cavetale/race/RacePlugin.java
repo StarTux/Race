@@ -16,16 +16,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
-import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.Component.textOfChildren;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static net.kyori.adventure.text.format.TextColor.color;
 
 @Getter
@@ -42,6 +43,17 @@ public final class RacePlugin extends JavaPlugin {
     private RaceServerListener raceServerListener;
     private SQLDatabase database;
     private Records records;
+    private final Component raceTitle = text("Race", GOLD);
+    private final Component grandPrixTitle = textOfChildren(text("G", color(0xffff00)),
+                                                            text("r", color(0xffff2b)),
+                                                            text("a", color(0xffff55)),
+                                                            text("n", color(0xffff80)),
+                                                            text("d", color(0xffffaa)),
+                                                            space(),
+                                                            text("P", color(0xffff80)),
+                                                            text("r", color(0xffff55)),
+                                                            text("i", color(0xffff2b)),
+                                                            text("x", color(0xffff00)));
 
     @Override
     public void onLoad() {
@@ -143,17 +155,6 @@ public final class RacePlugin extends JavaPlugin {
             break;
         }
         if (giveRewards) {
-            var title = join(noSeparators(),
-                             text("G", color(0xffff00)),
-                             text("r", color(0xffff2b)),
-                             text("a", color(0xffff55)),
-                             text("n", color(0xffff80)),
-                             text("d", color(0xffffaa)),
-                             space(),
-                             text("P", color(0xffff80)),
-                             text("r", color(0xffff55)),
-                             text("i", color(0xffff2b)),
-                             text("x", color(0xffff00)));
             List<SQLTrophy> trophies = new ArrayList<>();
             int i = 0;
             int placement = 0;
@@ -169,7 +170,7 @@ public final class RacePlugin extends JavaPlugin {
                                            "race_grand_prix",
                                            placement,
                                            TrophyCategory.CUP,
-                                           title,
+                                           grandPrixTitle,
                                            "You earned " + score + " points"));
             }
             Trophies.insertTrophies(trophies);
