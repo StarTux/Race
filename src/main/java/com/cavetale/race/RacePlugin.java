@@ -5,13 +5,9 @@ import com.cavetale.area.struct.AreasFile;
 import com.cavetale.core.connect.NetworkServer;
 import com.cavetale.core.struct.Vec3i;
 import com.cavetale.core.util.Json;
-import com.cavetale.fam.trophy.SQLTrophy;
-import com.cavetale.fam.trophy.Trophies;
-import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.race.sql.SQLPlayerMapRecord;
 import com.winthier.sql.SQLDatabase;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -153,27 +149,6 @@ public final class RacePlugin extends JavaPlugin {
                 player.setGameMode(GameMode.ADVENTURE);
             }
             break;
-        }
-        if (giveRewards) {
-            List<SQLTrophy> trophies = new ArrayList<>();
-            int i = 0;
-            int placement = 0;
-            int lastScore = -1;
-            for (UUID uuid : uuids) {
-                final int score = save.getScores().getOrDefault(uuid, 0);
-                if (score == 0) break;
-                if (lastScore != score) {
-                    lastScore = score;
-                    placement += 1;
-                }
-                trophies.add(new SQLTrophy(uuid,
-                                           "race_grand_prix",
-                                           placement,
-                                           TrophyCategory.CUP,
-                                           grandPrixTitle,
-                                           "You earned " + score + " points"));
-            }
-            Trophies.insertTrophies(trophies);
         }
     }
 

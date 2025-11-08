@@ -6,6 +6,8 @@ import com.cavetale.core.command.CommandNode;
 import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.playercache.PlayerCache;
+import com.cavetale.fam.trophy.Highscore;
+import com.cavetale.mytems.item.trophy.TrophyCategory;
 import com.cavetale.race.sql.SQLPlayerMapRecord;
 import com.winthier.creative.BuildWorld;
 import com.winthier.creative.file.Files;
@@ -166,7 +168,15 @@ public final class RaceAdminCommand extends AbstractCommand<RacePlugin> {
         plugin.getSave().setEventRaceWorld(null);
         plugin.save();
         sender.sendMessage(Component.text("Giving winners rewards...", YELLOW));
-        plugin.scoreRanking(true);
+        final int rewardCount = Highscore.reward(
+            plugin.getSave().getScores(),
+            "race_grand_prix",
+            TrophyCategory.CUP,
+            plugin.getGrandPrixTitle(),
+            hi -> "You earned " + hi.score + " points"
+        );
+        sender.sendMessage(text("Rewarded " + rewardCount + " players", YELLOW));
+        Highscore.rewardMoneyWithFeedback(sender, plugin, plugin.getSave().getScores(), "Grand Prix");
         return true;
     }
 
